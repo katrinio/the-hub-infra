@@ -1,53 +1,89 @@
-The Hub Infrastructure
+## The Hub Infrastructure
 
-Domains
+Личная инфраструктура для Finpipe и связанных сервисов.
 
-* finpipe.net — Finpipe application
-* grafana.finpipe.net — Grafana dashboards
-* status.finpipe.net — Uptime Kuma
+🌐 Domains
 
-Services
+Domain	Purpose
+finpipe.net	Основное приложение Finpipe
+grafana.finpipe.net	Метрики, логи и мониторинг
+status.finpipe.net	Страница состояния и uptime-мониторинг
 
-Finpipe
+⸻
 
-Compose:
+📦 Finpipe
 
-* docker/finpipe.compose.yml
-
-Components:
-
-* finpipe-web
-* finpipe-bot
-* postgres
-
-Monitoring
+Основной сервис.
 
 Compose:
 
-* docker/monitoring.compose.yml
+docker/finpipe.compose.yml
 
-Components:
+Состав:
 
-* grafana
-* loki
-* prometheus
-* alloy
-* node-exporter
+* finpipe-web — веб-интерфейс
+* finpipe-bot — Telegram-бот
+* postgres — база данных
 
-Status
+⸻
+
+📊 Monitoring Stack
+
+Наблюдаем за тем, чтобы всё работало и было понятно почему не работает.
 
 Compose:
 
-* docker/uptime-kuma.compose.yml
+docker/monitoring.compose.yml
 
-Components:
+Состав:
 
-* uptime-kuma
+* Grafana — дашборды
+* Loki — хранение логов
+* Prometheus — сбор метрик
+* Alloy — доставка логов и метрик
+* Node Exporter — метрики VPS
 
-Nginx
+⸻
 
-Configs:
+💚 Status & Alerts
 
-* nginx/finpipe.net.conf
-* nginx/grafana.finpipe.net.conf
-* nginx/status.finpipe.net.conf
+Проверка доступности сервисов и уведомления в Telegram.
+
+Compose:
+
+docker/uptime-kuma.compose.yml
+
+Состав:
+
+* Uptime Kuma
+
+Мониторит:
+
+* Finpipe
+* Grafana
+* VPS
+* внутренние сервисы
+
+⸻
+
+🔀 Nginx
+
+Точки входа для внешнего доступа.
+
+Конфиги:
+
+nginx/finpipe.net.conf
+nginx/grafana.finpipe.net.conf
+nginx/status.finpipe.net.conf
+
+⸻
+
+🚑 Recovery Notes
+
+Полезно помнить:
+
+* Grafana доступна через grafana.finpipe.net
+* Uptime Kuma доступна через status.finpipe.net
+* Все публичные сервисы работают через Nginx + Let’s Encrypt
+* Мониторинг отправляет уведомления в Telegram
+* Конфигурация инфраструктуры хранится в этом репозитории
