@@ -1,0 +1,10 @@
+.env
+*.env
+
+*.log
+
+data/
+volumes/
+
+.terraform/
+terraform.tfstate*

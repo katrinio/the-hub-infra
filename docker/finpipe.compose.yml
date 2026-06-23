@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: finpipe
+      POSTGRES_USER: finpipe
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "127.0.0.1:5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finpipe -d finpipe"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  finpipe-bot:
+    build: .
+    restart: unless-stopped
+    container_name: finpipe-bot
+
+    command: python -m src.integrations.telegram.bot
+
+    env_file:
+      - .env
+
+    environment:
+      DATABASE_URL: postgresql+psycopg://finpipe:${POSTGRES_PASSWORD}@postgres:5432/finpipe
+      CONTAINER_NAME: finpipe-bot
+
+    volumes:
+      - ~/finpipe-secrets/credentials.json:/app/credentials.json:ro
+      - ~/finpipe-secrets/token.json:/app/token.json:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  finpipe-web:
+    build: .
+    restart: unless-stopped
+
+    command: uvicorn src.interfaces.web.app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "127.0.0.1:8000:8000"
+   
+    env_file:
+      - .env
+
+    environment:
+      DATABASE_URL: postgresql+psycopg://finpipe:${POSTGRES_PASSWORD}@postgres:5432/finpipe
+
+    volumes:
+      - ~/finpipe-secrets/credentials.json:/app/credentials.json:ro
+      - ~/finpipe-secrets/token.json:/app/token.json:ro
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
