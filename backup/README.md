@@ -31,6 +31,7 @@
 ## Документы
 
 - [inventory.md](inventory.md)
+- [principles.md](principles.md)
 - [strategy.md](strategy.md)
 - [restore.md](restore.md)
 
@@ -56,8 +57,34 @@ for signatures is PostgreSQL.
 
 `Yo Registry` присутствует в filesystem backup scope, потому что processed images являются
 authoritative filesystem data, а база хранит пути `photo_original_path` и `photo_processed_path`.
+Production filesystem path: `/srv/data/yo-registry/uploads`.
 
 `Portainer` отсутствует в активном filesystem backup scope, потому что он не развёрнут.
+
+## Backup Layout
+
+Рекомендуемый локальный staging layout:
+
+```text
+/srv/backups/<timestamp>/
+├── postgres/
+├── sqlite/
+└── manifest.txt
+```
+
+Filesystem локально не копируется в staging.
+`restic` должен архивировать staging directory и `/srv/data/yo-registry/uploads`.
+
+## Backup Principles
+
+Обязательные правила вынесены в [principles.md](principles.md).
+Документ фиксирует:
+
+- что резервируется;
+- что не резервируется;
+- почему;
+- как восстанавливать;
+- какие правила обязательны для всех систем.
 
 ## Installation Checklist
 

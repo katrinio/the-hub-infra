@@ -1,6 +1,13 @@
 # Disaster Recovery Runbook
 
-Этот документ описывает восстановление PostgreSQL и SQLite backups.
+Этот документ описывает восстановление PostgreSQL, SQLite и filesystem data.
+
+## Restore Principles
+
+- Для PostgreSQL используется `pg_restore`.
+- Для SQLite выполняется замена database file и `PRAGMA integrity_check;`.
+- Для filesystem сначала восстанавливаются файлы, затем database, затем проверяется совпадение путей.
+- Filesystem и database должны восстанавливаться согласованно.
 
 ## Yo Registry
 
@@ -15,13 +22,12 @@
 
 ## Finpipe
 
-Формат backup: plain SQL compressed as `.sql.gz`.
+Формат backup: PostgreSQL logical backup.
 
 1. Остановить Finpipe или перевести его в безопасный режим восстановления.
-2. Распаковать gzip.
-3. Восстановить дамп через `psql`.
-4. Не использовать `pg_restore` для plain SQL.
-5. Проверить схему, данные и доступ приложения.
+2. Восстановить дамп через `pg_restore`.
+3. Проверить схему, данные и доступ приложения.
+4. Убедиться, что критичные секреты, включая `SIGNATURE_ENCRYPTION_KEY`, восстановлены отдельно.
 
 ## Общие замечания
 
