@@ -1,22 +1,21 @@
 # Backup Inventory
 
-Этот документ перечисляет данные, которые должны попасть в резервное копирование.
-Неизвестные значения помечены как `TODO`.
+Этот документ описывает, какие данные резервируются и каким способом они управляются.
 
 ## PostgreSQL
 
-| Crit | System | Component | Location | Backup Method | Stop Service? | Restore Notes |
-|---|---|---|---|---|---|---|
-| 🔴 | Finpipe | PostgreSQL database | TODO | `pg_dump` | No | TODO |
-| 🔴 | Traect | PostgreSQL database | TODO | `pg_dump` | No | TODO |
-| 🔴 | Yo Registry | PostgreSQL database | TODO | `pg_dump` | No | TODO |
+| Crit | System | Component | Database | Location | Backup Method | Source | Format | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 🔴 | Finpipe | PostgreSQL | `finpipe` | `finpipe-postgres-1 / finpipe` | application-managed Python workflow | `/home/katrin/projects/finpipe/src/workflows/monitoring/backup_database.py` | plain SQL compressed as `.sql.gz` | Не управляется `backup/scripts/backup-postgres.sh` |
+| 🔴 | Yo Registry | PostgreSQL | `registry` | `finpipe-postgres-1 / registry` | infrastructure-managed `backup-postgres.sh` | `backup/scripts/backup-postgres.sh` | `pg_dump` custom `.dump` | Использует PostgreSQL-инстанс Finpipe, но отдельную базу |
 
 ## SQLite
 
 | Crit | System | Component | Location | Backup Method | Stop Service? | Restore Notes |
 |---|---|---|---|---|---|---|
-| 🔴  | Echo | SQLite database | TODO | `sqlite3 .backup` | No | TODO |
-| 🔴  | Postbox | SQLite database | TODO | `sqlite3 .backup` | No | Сервис находится на VPS, но ещё не развёрнут окончательно. TODO |
+| 🔴 | Traect | SQLite | `/data/traect.db` inside the application container/volume | `sqlite3 .backup` | No | Не относится к PostgreSQL |
+| 🔴 | Echo | SQLite database | TODO | `sqlite3 .backup` | No | TODO |
+| 🔴 | Postbox | SQLite database | TODO | `sqlite3 .backup` | No | Сервис находится на VPS, но ещё не развёрнут окончательно. TODO |
 | 🟡 | Uptime Kuma | SQLite database | TODO | `sqlite3 .backup` | No | TODO |
 | 🟡 | Grafana | SQLite database | TODO | `sqlite3 .backup` | No | TODO |
 
@@ -24,9 +23,9 @@
 
 | Crit | System | Component | Location | Backup Method | Stop Service? | Restore Notes |
 |---|---|---|---|---|---|---|
-| 🔴 | Finpipe | Uploads | TODO | restic | preferred | TODO |
-| 🔴 | Yo Registry | Image Storage | TODO | restic | preferred | TODO |
-| 🟡 | Portainer | Application Data | TODO | restic | preferred | TODO |
+| 🔴 | Finpipe | Uploads | TODO | TODO | preferred | TODO |
+| 🔴 | Yo Registry | Image Storage | TODO | TODO | preferred | TODO |
+| 🟡 | Portainer | Application Data | TODO | TODO | preferred | TODO |
 
 Примечание: `Prometheus TSDB` и `Loki data` не включаются в обязательные бэкапы. Их история считается
 восстанавливаемой или некритичной, пока не появятся требования по долгосрочному хранению или аудиту.
@@ -53,14 +52,10 @@
 
 | Target | Location | Status | Notes |
 |---|---|---|---|
-| Primary restic repository | TODO | TODO | TODO |
-| Secondary target | TODO | TODO | TODO |
+| PostgreSQL staging directory | `/srv/backups/staging/postgres` | Planned | Используется для инфраструктурного Registry backup |
 
 ## Retention Policy
 
 | Type | Keep |
 |---|---|
-| Daily | TODO |
-| Weekly | TODO |
-| Monthly | TODO |
-| Yearly | TODO |
+| Registry PostgreSQL dumps | `14 days` | 

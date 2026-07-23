@@ -1,20 +1,25 @@
 # Backup Strategy
 
-Этот документ фиксирует проектные решения для будущей системы резервного копирования.
-Реальные параметры, сроки и целевые хранилища пока не утверждены.
+Этот документ фиксирует текущие решения по PostgreSQL backup в `the-hub-infra`.
 
 ## Decisions
 
-- PostgreSQL резервируется логическими дампами через `pg_dump`.
-- PostgreSQL globals и roles сохраняются через `pg_dumpall --globals-only`.
-- SQLite резервируется через `sqlite3 .backup`, а не простым `cp` работающей базы.
-- Файловые данные передаются в `restic`.
-- Git-managed конфигурация отдельно не архивируется.
-- `restic` отвечает за шифрование, дедупликацию, snapshots и retention.
-- `staging` является временным и очищается только после успешного snapshot.
-- Секреты не должны храниться в Git.
-- Backup и restore должны тестироваться отдельно.
-- Пока это только design document; реальные параметры ещё не утверждены.
+- Finpipe backup остаётся application-managed.
+- Registry backup становится infrastructure-managed.
+- Сейчас допустимы два формата backup без принудительной унификации:
+- Finpipe: `.sql.gz`
+- Registry: custom `.dump`
+- Не пытаться унифицировать форматы без отдельной миграции.
+- PostgreSQL volume не заменяет логический backup.
+- Registry использует PostgreSQL-инстанс Finpipe, но отдельную базу.
+- Для Registry используется `pg_dump -Fc` через `docker exec` и stdout без `docker cp`.
+- Проверка свежести и базовой читаемости dump выполняется отдельно скриптом проверки.
+
+## Scope
+
+- `backup/scripts/backup-postgres.sh` отвечает только за infrastructure-managed PostgreSQL backup.
+- Finpipe application workflow остаётся отдельным источником истины для backup базы `finpipe`.
+- Traect должен учитываться как SQLite-сервис, а не как PostgreSQL-сервис.
 
 ## RPO
 

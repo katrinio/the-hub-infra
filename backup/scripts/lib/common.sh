@@ -4,6 +4,8 @@
 
 set -Eeuo pipefail
 
+LOCK_FD=""
+
 log_info() {
   printf '[INFO] %s\n' "$*"
 }
@@ -49,15 +51,61 @@ ensure_directory() {
   mkdir -p -- "${dir_path}"
 }
 
-cleanup() {
-  log_info "cleanup requested"
-}
-
 acquire_lock() {
-  local lock_name=${1:-}
-  if [[ -z "${lock_name}" ]]; then
-    log_error "acquire_lock: missing lock name"
+  local lock_file=${1:-}
+  if [[ -z "${lock_file}" ]]; then
+    log_error "acquire_lock: missing lock file"
     return 1
   fi
-  log_info "lock placeholder: ${lock_name}"
+  require_command flock
+  ensure_directory "$(dirname "${lock_file}")"
+  exec {LOCK_FD}>"${lock_file}"
+  flock -n "${LOCK_FD}" || {
+    log_error "failed to acquire lock: ${lock_file}"
+    return 1
+  }
+}
+
+release_lock() {
+  if [[ -n "${LOCK_FD}" ]]; then
+    flock -u "${LOCK_FD}" || true
+    eval "exec ${LOCK_FD}>&-"
+    LOCK_FD=""
+  fi
+}
+
+push_kuma_status() {
+  local status=${1:-}
+  local message=${2:-}
+  local url_file=${3:-${KUMA_PUSH_URL_FILE:-}}
+  local url=""
+
+  if [[ "${DRY_RUN:-0}" == "1" ]]; then
+    log_info "DRY_RUN=1: skipping Kuma push (${status})"
+    return 0
+  fi
+
+  if [[ -z "${url_file}" || ! -f "${url_file}" ]]; then
+    log_warn "Kuma push URL file is missing; skipping push"
+    return 0
+  fi
+
+  url="$(<"${url_file}")"
+  if [[ -z "${url}" ]]; then
+    log_warn "Kuma push URL is empty; skipping push"
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    log_warn "curl is not installed; skipping Kuma push"
+    return 0
+  fi
+
+  curl --fail --silent --show-error \
+    --max-time 10 \
+    --data-urlencode "msg=${message}" \
+    "${url}?status=${status}" >/dev/null || {
+    log_warn "failed to push backup status to Kuma"
+    return 0
+  }
 }
