@@ -7,47 +7,53 @@
 
 ---
 
+|Criticality| Значение                                                       |
+|--------|----------------------------------------------------------------|
+|🔴 Critical| 	Потеря недопустима (PostgreSQL, Registry, Uploads)            |
+|🟡 Important| Потеря нежелательна (Grafana, Uptime Kuma, Portainer)          |
+|🟢 Rebuildable|  Можно восстановить из Git (Alloy, Prometheus config, Compose) |
+
 ## PostgreSQL
 
-| System | Database | Location | Backup Method | Stop Service? | Restore Notes |
-|--------|----------|----------|---------------|---------------|---------------|
-| Finpipe | | | `pg_dump` | No | |
-| Traect | | | `pg_dump` | No | |
-| Yo Registry | | | `pg_dump` | No | |
+|Crit| System | Database | Location | Backup Method | Stop Service? | Restore Notes |
+|--------|--------|----------|----------|---------------|---------------|---------------|
+|🔴| Finpipe | | | `pg_dump` | No | |
+|🔴| Traect | | | `pg_dump` | No | |
+|🔴| Yo Registry | | | `pg_dump` | No | |
 
 ---
 
 ## SQLite
 
-| System | Database | Location | Backup Method | Stop Service? | Restore Notes |
-|--------|----------|----------|---------------|---------------|---------------|
-| Echo | | | `sqlite3 .backup` | No | |
-| Postbox | | | `sqlite3 .backup` | No | *(ещё не развёрнут окончательно)* |
-| Uptime Kuma | | | `sqlite3 .backup` | No | |
-| Grafana | | | `sqlite3 .backup` | No | |
+|Crit| System | Database | Location | Backup Method | Stop Service? | Restore Notes |
+|--------|--------|----------|----------|---------------|---------------|---------------|
+|🔴| Echo | | | `sqlite3 .backup` | No | |
+|🔴| Postbox | | | `sqlite3 .backup` | No | *(ещё не развёрнут окончательно)* |
+|🟡| Uptime Kuma | | | `sqlite3 .backup` | No | |
+|🟡| Grafana | | | `sqlite3 .backup` | No | |
 
 ---
 
 ## Filesystem Data
 
-| System | Data | Location | Backup Method | Stop Service? | Restore Notes |
-|--------|------|----------|---------------|---------------|---------------|
-| Finpipe | Uploads | | Filesystem | No | |
-| Yo Registry | Image Storage | | Filesystem | Preferred | |
-| Portainer | Application Data | | Filesystem | No | |
+|Crit| System | Data | Location | Backup Method | Stop Service? | Restore Notes |
+|--------|--------|------|----------|---------------|---------------|---------------|
+|🔴| Finpipe | Uploads | | Filesystem | No | |
+|🔴| Yo Registry | Image Storage | | Filesystem | Preferred | |
+|🟡| Portainer | Application Data | | Filesystem | No | |
 
 ---
 
 ## Git Managed
 
-> Эти данные не резервируются отдельно, так как являются частью Git-репозиториев.
+> Эти данные не требуют отдельного резервного копирования, так как являются частью Git-репозиториев.
 
-| System | Data | Repository |
-|--------|------|------------|
-| Alloy | Configuration | `the-hub-infra` |
-| Prometheus | Configuration | `the-hub-infra` |
-| Monitoring Compose | Compose files | `the-hub-infra` |
-| Grafana Provisioning | Configuration | `the-hub-infra` |
+|Crit| System | Component | Repository |
+|--------|--------|-----------|------------|
+|🟢| Monitoring | Alloy configuration | `the-hub-infra` |
+|🟢| Monitoring | Prometheus configuration | `the-hub-infra` |
+|🟢| Monitoring | Docker Compose | `the-hub-infra` |
+|🟢| Monitoring | Grafana provisioning | `the-hub-infra` |
 
 ---
 
@@ -56,7 +62,7 @@
 | Item | Location | Included in Backup | Notes |
 |------|----------|-------------------|-------|
 | `.env` files | | Yes | |
-| SSH keys | | No | Хранятся отдельно |
+| SSH keys | | No | Stored separately |
 | TLS certificates | | | |
 | Registry credentials | | | |
 
@@ -66,7 +72,7 @@
 
 | Repository | Location |
 |------------|----------|
-| Primary | | 
+| Primary | |
 | Secondary | |
 
 ---
@@ -86,7 +92,7 @@
 
 ### PostgreSQL
 
-- [ ] Restore roles (`pg_dumpall --globals-only`)
+- [ ] Restore global roles (`pg_dumpall --globals-only`)
 - [ ] Create database
 - [ ] Restore with `pg_restore`
 - [ ] Verify application
@@ -108,5 +114,3 @@
 ---
 
 ## Notes
-
-```
