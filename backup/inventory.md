@@ -1,116 +1,66 @@
 # Backup Inventory
 
-Этот документ описывает все данные, которые необходимо резервировать,
-как они сохраняются и как восстанавливаются.
-
-> Последнее обновление: YYYY-MM-DD
-
----
-
-|Criticality| Значение                                                       |
-|--------|----------------------------------------------------------------|
-|🔴 Critical| 	Потеря недопустима (PostgreSQL, Registry, Uploads)            |
-|🟡 Important| Потеря нежелательна (Grafana, Uptime Kuma, Portainer)          |
-|🟢 Rebuildable|  Можно восстановить из Git (Alloy, Prometheus config, Compose) |
+Этот документ перечисляет данные, которые должны попасть в резервное копирование.
+Неизвестные значения помечены как `TODO`.
 
 ## PostgreSQL
 
-|Crit| System | Database | Location | Backup Method | Stop Service? | Restore Notes |
-|--------|--------|----------|----------|---------------|---------------|---------------|
-|🔴| Finpipe | | | `pg_dump` | No | |
-|🔴| Traect | | | `pg_dump` | No | |
-|🔴| Yo Registry | | | `pg_dump` | No | |
-
----
+| Crit | System | Component | Location | Backup Method | Stop Service? | Restore Notes |
+|---|---|---|---|---|---|---|
+| 🔴 | Finpipe | PostgreSQL database | TODO | `pg_dump` | No | TODO |
+| 🔴 | Traect | PostgreSQL database | TODO | `pg_dump` | No | TODO |
+| 🔴 | Yo Registry | PostgreSQL database | TODO | `pg_dump` | No | TODO |
 
 ## SQLite
 
-|Crit| System | Database | Location | Backup Method | Stop Service? | Restore Notes |
-|--------|--------|----------|----------|---------------|---------------|---------------|
-|🔴| Echo | | | `sqlite3 .backup` | No | |
-|🔴| Postbox | | | `sqlite3 .backup` | No | *(ещё не развёрнут окончательно)* |
-|🟡| Uptime Kuma | | | `sqlite3 .backup` | No | |
-|🟡| Grafana | | | `sqlite3 .backup` | No | |
+| Crit | System | Component | Location | Backup Method | Stop Service? | Restore Notes |
+|---|---|---|---|---|---|---|
+| 🔴  | Echo | SQLite database | TODO | `sqlite3 .backup` | No | TODO |
+| 🔴  | Postbox | SQLite database | TODO | `sqlite3 .backup` | No | Сервис находится на VPS, но ещё не развёрнут окончательно. TODO |
+| 🟡 | Uptime Kuma | SQLite database | TODO | `sqlite3 .backup` | No | TODO |
+| 🟡 | Grafana | SQLite database | TODO | `sqlite3 .backup` | No | TODO |
 
----
+## Filesystem
 
-## Filesystem Data
+| Crit | System | Component | Location | Backup Method | Stop Service? | Restore Notes |
+|---|---|---|---|---|---|---|
+| 🔴 | Finpipe | Uploads | TODO | restic | preferred | TODO |
+| 🔴 | Yo Registry | Image Storage | TODO | restic | preferred | TODO |
+| 🟡 | Portainer | Application Data | TODO | restic | preferred | TODO |
 
-|Crit| System | Data | Location | Backup Method | Stop Service? | Restore Notes |
-|--------|--------|------|----------|---------------|---------------|---------------|
-|🔴| Finpipe | Uploads | | Filesystem | No | |
-|🔴| Yo Registry | Image Storage | | Filesystem | Preferred | |
-|🟡| Portainer | Application Data | | Filesystem | No | |
-
----
+Примечание: `Prometheus TSDB` и `Loki data` не включаются в обязательные бэкапы. Их история считается
+восстанавливаемой или некритичной, пока не появятся требования по долгосрочному хранению или аудиту.
 
 ## Git Managed
 
-> Эти данные не требуют отдельного резервного копирования, так как являются частью Git-репозиториев.
-
-|Crit| System | Component | Repository |
-|--------|--------|-----------|------------|
-|🟢| Monitoring | Alloy configuration | `the-hub-infra` |
-|🟢| Monitoring | Prometheus configuration | `the-hub-infra` |
-|🟢| Monitoring | Docker Compose | `the-hub-infra` |
-|🟢| Monitoring | Grafana provisioning | `the-hub-infra` |
-
----
+| Component | Source | Notes |
+|---|---|---|
+| Alloy configuration | Git | `TODO` |
+| Prometheus configuration | Git | `TODO` |
+| Monitoring Docker Compose | Git | `TODO` |
+| Grafana provisioning | Git | `TODO` |
 
 ## Secrets
 
-| Item | Location | Included in Backup | Notes |
-|------|----------|-------------------|-------|
-| `.env` files | | Yes | |
-| SSH keys | | No | Stored separately |
-| TLS certificates | | | |
-| Registry credentials | | | |
+| Item | Location | Backup Method | Notes |
+|---|---|---|---|
+| Environment files | TODO | Manual secure handling | Не хранить в Git |
+| TLS certificates | TODO | Manual secure handling | TODO |
+| Registry credentials | TODO | Manual secure handling | TODO |
+| SSH keys | TODO | Manual secure handling | TODO |
 
----
+## External Backup Targets
 
-## External Backup Target
-
-| Repository | Location |
-|------------|----------|
-| Primary | |
-| Secondary | |
-
----
+| Target | Location | Status | Notes |
+|---|---|---|---|
+| Primary restic repository | TODO | TODO | TODO |
+| Secondary target | TODO | TODO | TODO |
 
 ## Retention Policy
 
 | Type | Keep |
-|------|------|
-| Daily | |
-| Weekly | |
-| Monthly | |
-| Yearly | |
-
----
-
-## Restore Checklist
-
-### PostgreSQL
-
-- [ ] Restore global roles (`pg_dumpall --globals-only`)
-- [ ] Create database
-- [ ] Restore with `pg_restore`
-- [ ] Verify application
-
-### SQLite
-
-- [ ] Restore database file
-- [ ] Run `PRAGMA integrity_check`
-- [ ] Start application
-- [ ] Verify application
-
-### Filesystem
-
-- [ ] Restore files/directories
-- [ ] Verify ownership and permissions
-- [ ] Restart service
-- [ ] Verify application
-
----
-
-## Notes
+|---|---|
+| Daily | TODO |
+| Weekly | TODO |
+| Monthly | TODO |
+| Yearly | TODO |

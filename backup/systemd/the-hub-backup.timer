@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily the-hub backup timer
+
+[Timer]
+# TODO: choose the final backup run time.
+OnCalendar=*-*-* TODO:00:00
+Persistent=true
+RandomizedDelaySec=1h
+Unit=the-hub-backup.service
+
+[Install]
+WantedBy=timers.target
