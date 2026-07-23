@@ -55,6 +55,19 @@
 4. Запустить `Grafana`.
 5. Проверить dashboards, users и alerting.
 
+## Filesystem Restore
+
+Filesystem и database должны восстанавливаться согласованно.
+
+## Yo Registry Filesystem
+
+1. Остановить приложение.
+2. Восстановить filesystem.
+3. Восстановить PostgreSQL.
+4. Убедиться, что `photo_processed_path` соответствует существующим файлам.
+5. Проверить права.
+6. Запустить приложение.
+
 ## Traect And Echo
 
 - `Traect` использует application-managed backup в `/home/katrin/projects/traect/backup.sh`.

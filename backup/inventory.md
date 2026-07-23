@@ -23,9 +23,15 @@
 
 | Crit | System | Component | Location | Backup Method | Stop Service? | Restore Notes |
 |---|---|---|---|---|---|---|
-| 🔴 | Finpipe | Uploads | TODO | TODO | preferred | TODO |
-| 🔴 | Yo Registry | Image Storage | TODO | TODO | preferred | TODO |
-| 🟡 | Portainer | Application Data | TODO | TODO | preferred | TODO |
+| 🔴 | Yo Registry | Processed Images | `TBD (deployment path)` | `Filesystem + restic` | preferred | Restore together with DB paths |
+| 🟢 | Portainer | Application Data | `Not deployed` | `Pending` | n/a | Add after deployment |
+
+Finpipe не включается в filesystem backup.
+Filesystem copies of encrypted signatures are recoverable working artifacts.
+Authoritative storage is PostgreSQL.
+
+`SIGNATURE_ENCRYPTION_KEY` является критичным секретом и должен резервироваться отдельно вместе с
+остальными секретами проекта.
 
 Примечание: `Prometheus TSDB` и `Loki data` не включаются в обязательные бэкапы. Их история считается
 восстанавливаемой или некритичной, пока не появятся требования по долгосрочному хранению или аудиту.

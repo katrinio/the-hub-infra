@@ -39,6 +39,15 @@ Application-owned рабочие скрипты не заменяются, ес�
 - `Grafana` находится внутри Docker volume и требует чтения с root-level доступом.
 - `Postbox` остаётся application-managed и inactive до фактического deployment production DB.
 
+## Filesystem Backup Policy
+
+- Резервируются только невосстановимые файлы.
+- Временные uploads не резервируются.
+- Данные, полностью содержащиеся в PostgreSQL, отдельно не резервируются.
+- Файловые копии, являющиеся рабочим кэшем, не резервируются.
+- `Yo Registry` processed images являются authoritative filesystem data.
+- `Portainer` будет добавлен после внедрения.
+
 ## Exclusions
 
 - `Prometheus TSDB` и `Loki data` по-прежнему исключены из обязательных backup-задач.

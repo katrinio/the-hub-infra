@@ -48,6 +48,17 @@ restore-сценария.
 /srv/backups/staging/sqlite
 ```
 
+## Filesystem Backup Scope
+
+`Finpipe` отсутствует в filesystem backup scope, потому что production использует PostgreSQL, а
+filesystem copies encrypted signatures являются recoverable working artifacts. Authoritative storage
+for signatures is PostgreSQL.
+
+`Yo Registry` присутствует в filesystem backup scope, потому что processed images являются
+authoritative filesystem data, а база хранит пути `photo_original_path` и `photo_processed_path`.
+
+`Portainer` отсутствует в активном filesystem backup scope, потому что он не развёрнут.
+
 ## Installation Checklist
 
 1. Создать `/etc/the-hub-backup/backup.env`.
