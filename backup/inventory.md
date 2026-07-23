@@ -11,13 +11,13 @@
 
 ## SQLite
 
-| Crit | System | Component | Location | Backup Method | Stop Service? | Restore Notes |
-|---|---|---|---|---|---|---|
-| 🔴 | Traect | SQLite | `/data/traect.db` inside the application container/volume | `sqlite3 .backup` | No | Не относится к PostgreSQL |
-| 🔴 | Echo | SQLite database | TODO | `sqlite3 .backup` | No | TODO |
-| 🔴 | Postbox | SQLite database | TODO | `sqlite3 .backup` | No | Сервис находится на VPS, но ещё не развёрнут окончательно. TODO |
-| 🟡 | Uptime Kuma | SQLite database | TODO | `sqlite3 .backup` | No | TODO |
-| 🟡 | Grafana | SQLite database | TODO | `sqlite3 .backup` | No | TODO |
+| Crit | System | Component | Location | Backup Method | Schedule | Retention | Notes |
+|---|---|---|---|---|---|---|---|
+| 🟡 | Traect | SQLite | `/home/katrin/projects/traect/data/traect.db` | application-managed `sqlite3 .backup` | daily `05:30` via user crontab | `30 days` | `Journal mode: delete`. Existing script: `/home/katrin/projects/traect/backup.sh` |
+| 🟡 | Echo | SQLite | `/home/katrin/data/echo/echo.db` | application-managed `sqlite3 .backup` | daily `05:15` via user crontab | `30 days` | Existing script: `/home/katrin/scripts/echo/backup.sh`. Hardcoded monitoring URL is technical debt and must not be copied into Git |
+| 🟡 | Postbox | SQLite | `/home/katrin/projects/postbox/data/postbox.db` expected path | application-managed `VACUUM INTO` with integrity verification | No active schedule confirmed | TODO | Not yet deployed. Existing scripts: `/home/katrin/projects/postbox/scripts/backup_sqlite.sh` and `/home/katrin/projects/postbox/scripts/verify_backup.sh` |
+| 🟡 | Uptime Kuma | SQLite | `/home/katrin/projects/uptime-kuma/data/kuma.db` | infrastructure-managed `backup-sqlite.sh` via `sqlite3 .backup` | Planned via systemd timer | `30 days` | `Journal mode: wal`. Safe SQLite snapshot required. No prior backup found |
+| 🟡 | Grafana | SQLite | `/var/lib/docker/volumes/monitoring_grafana-data/_data/grafana.db` | infrastructure-managed `backup-sqlite.sh` via `sqlite3 .backup` | Planned via systemd timer | `30 days` | No prior backup found. Root-level read permission required |
 
 ## Filesystem
 
@@ -53,9 +53,12 @@
 | Target | Location | Status | Notes |
 |---|---|---|---|
 | PostgreSQL staging directory | `/srv/backups/staging/postgres` | Planned | Используется для инфраструктурного Registry backup |
+| SQLite staging directory | `/srv/backups/staging/sqlite` | Planned | Используется для инфраструктурных backup `Uptime Kuma` и `Grafana` |
 
 ## Retention Policy
 
 | Type | Keep |
 |---|---|
-| Registry PostgreSQL dumps | `14 days` | 
+| Registry PostgreSQL dumps | `14 days` |
+| Uptime Kuma SQLite dumps | `30 days` |
+| Grafana SQLite dumps | `30 days` |

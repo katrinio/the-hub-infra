@@ -1,0 +1,16 @@
+# SQLite backup inventory template.
+#
+# Real config path:
+# /etc/the-hub-backup/sqlite.conf
+#
+# Format:
+# system|source_path|output_name|retention_days|criticality
+#
+# source_path must point to the host-visible production DB.
+#
+# Traect, Echo and Postbox are application-managed and intentionally absent.
+# Postbox is not yet deployed and must not be added to active infrastructure backup
+# until the production database exists.
+
+Uptime Kuma|/home/katrin/projects/uptime-kuma/data/kuma.db|uptime-kuma|30|important
+Grafana|/var/lib/docker/volumes/monitoring_grafana-data/_data/grafana.db|grafana|30|important

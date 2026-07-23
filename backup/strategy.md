@@ -1,8 +1,22 @@
 # Backup Strategy
 
-Этот документ фиксирует текущие решения по PostgreSQL backup в `the-hub-infra`.
+Этот документ фиксирует текущие решения по backup в `the-hub-infra`.
 
-## Decisions
+## Responsibilities
+
+- Application-managed:
+- `Finpipe`
+- `Traect`
+- `Echo`
+- `Postbox`
+- Infrastructure-managed:
+- `Yo Registry`
+- `Uptime Kuma`
+- `Grafana`
+
+Application-owned рабочие скрипты не заменяются, если они уже существуют и подтверждены в эксплуатации.
+
+## PostgreSQL
 
 - Finpipe backup остаётся application-managed.
 - Registry backup становится infrastructure-managed.
@@ -15,11 +29,20 @@
 - Для Registry используется `pg_dump -Fc` через `docker exec` и stdout без `docker cp`.
 - Проверка свежести и базовой читаемости dump выполняется отдельно скриптом проверки.
 
-## Scope
+## SQLite
 
-- `backup/scripts/backup-postgres.sh` отвечает только за infrastructure-managed PostgreSQL backup.
-- Finpipe application workflow остаётся отдельным источником истины для backup базы `finpipe`.
-- Traect должен учитываться как SQLite-сервис, а не как PostgreSQL-сервис.
+- Plain `cp` небезопасен для live SQLite database.
+- Для SQLite в `wal` mode это особенно важно, потому что согласованное состояние зависит от основного файла и sidecar-файлов WAL/SHM.
+- `sqlite3 .backup` использует SQLite backup API и создаёт согласованный snapshot.
+- Для infrastructure-managed SQLite backup используются только `Uptime Kuma` и `Grafana`.
+- `Uptime Kuma` использует `wal` mode и поэтому должен резервироваться только безопасным snapshot-методом.
+- `Grafana` находится внутри Docker volume и требует чтения с root-level доступом.
+- `Postbox` остаётся application-managed и inactive до фактического deployment production DB.
+
+## Exclusions
+
+- `Prometheus TSDB` и `Loki data` по-прежнему исключены из обязательных backup-задач.
+- Их история считается восстанавливаемой или некритичной, пока не появятся требования по долгосрочному хранению или аудиту.
 
 ## RPO
 

@@ -42,6 +42,18 @@ require_file() {
   }
 }
 
+require_regular_file() {
+  local file_path=${1:-}
+  if [[ -z "${file_path}" ]]; then
+    log_error "require_regular_file: missing file path"
+    return 1
+  fi
+  [[ -f "${file_path}" ]] || {
+    log_error "required regular file not found: ${file_path}"
+    return 1
+  }
+}
+
 ensure_directory() {
   local dir_path=${1:-}
   if [[ -z "${dir_path}" ]]; then

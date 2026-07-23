@@ -1,0 +1,18 @@
+[Unit]
+Description=the-hub SQLite backup
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/home/katrin/projects/the-hub-infra
+EnvironmentFile=-/etc/the-hub-backup/backup.env
+ExecStart=/home/katrin/projects/the-hub-infra/backup/scripts/backup-sqlite.sh
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
