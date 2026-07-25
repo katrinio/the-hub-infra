@@ -44,11 +44,25 @@ Dashboards вне folder `The Hub` (существовали ранее, не т
 
 Удалён: `Infra / VPS` — его панели (CPU / RAM / Disk / Network / Load / Uptime) перенесены в `10 Infrastructure` (в Grafana Recently deleted ~30 дней).
 
+### Backup / export (MVP)
+
+Дашборды пока не под provisioning, но их JSON можно выгружать в git скриптом:
+
+```bash
+export GRAFANA_URL=https://grafana.finpipe.net
+export GRAFANA_TOKEN=<service-account-token>   # роль Viewer достаточно
+monitoring/config/grafana/export-dashboards.sh
+```
+
+Скрипт кладёт `dashboards/<uid>.json` (с обнулённым `id` и без `version` — для портируемости). Список uid внутри скрипта; при добавлении нового дашборда допиши uid туда. Полноценный provisioning (auto-load + read-only) — отдельный будущий шаг.
+
 ### Loki label reality
 
 Alloy сейчас пишет Docker-логи в Loki одним stream'ом `service_name="unknown_service"` (плюс `detected_level`), без per-container и systemd labels. Поэтому LogQL-панели построены на текстовых фильтрах и `detected_level`, а не на стабильных labels `job` / `service` / `host`, описанных ниже как target-состояние. Для label-based queries требуется доработка Alloy pipeline (container labels + journal source).
 
 Loki self-audit noise: контейнеры `grafana` и `loki` шлют свой stdout в Loki, поэтому error-панели исключают строки собственных запросов Loki фильтром `!= "query_hash="`.
+
+Log format: у сервиса `grafana` в `monitoring/compose.yaml` выставлен `GF_LOG_CONSOLE_FORMAT=json` (вместо logfmt по умолчанию) — логи Grafana пишутся в JSON, чище парсятся в Loki по полям (`level`, `msg`, ...). Level оставлен `info`. Цветовая маркировка уровня и `detected_level` работают на обоих форматах. Каждый другой контейнер логирует в своём формате — эта настройка влияет только на Grafana.
 
 ## Architecture Diagram
 
@@ -57,7 +71,7 @@ node-exporter ───────────────→ Prometheus ─┐
 cadvisor ────────────────────→ Prometheus ─┤
 backup textfile metrics ─────→ Prometheus ─┤  planned / instrumentation required
 docker-cache metrics ────────→ Prometheus ─┤  planned / instrumentation required
-                                            ├→ Grafana
+                                           ├→ Grafana
 Docker container logs ─→ Alloy ─→ Loki ────┤
 systemd journal ───────→ Alloy ─→ Loki ────┤  planned / instrumentation required
 Uptime Kuma ───────────────────────────────┘  heartbeat layer, not metric source of truth
@@ -139,7 +153,38 @@ Operational questions:
 - Растёт ли Docker resource usage?
 - Все ли monitoring targets scrape'ятся?
 
-Status: partially available. `node-exporter`, `cadvisor` и `prometheus` уже scrape'ятся.
+Status: implemented. Панели: CPU / Memory / Disk (gauge с порогами 70/90), CPU / Memory trends с пороговой раскраской, Load average, Network traffic, Uptime, disk usage by mount (bar gauge), filesystem free bytes и Filesystem free (/), container CPU / memory (cAdvisor), Prometheus scrape health (table) и Target status. Load / Network / Uptime перенесены из удалённого `Infra / VPS`.
+
+### 15 Applications
+
+Purpose: сколько ресурсов занимает каждое приложение, без шума от инфраструктуры.
+
+Реализация: контейнеры cAdvisor группируются по приложению через `label_replace` (label `name` -> `app`); вся инфраструктура свёрнута в один ряд `infra`.
+
+Application mapping:
+
+- `finpipe`: `finpipe-finpipe-web-1`, `finpipe-bot`, `finpipe-postgres-1`
+- `echo`: `echo-app`
+- `traect`: `traect`
+- `registry`: `registry-web`
+- `infra` (один aggregated series): `prometheus`, `cadvisor`, `loki`, `alloy`, `grafana`, `uptime-kuma`, `node-exporter`
+
+Grouping PromQL (memory; для CPU заменить selector на `rate(container_cpu_usage_seconds_total{name!=""}[5m])`):
+
+```promql
+sum by (app) (
+  label_replace(label_replace(label_replace(label_replace(label_replace(
+    container_memory_working_set_bytes{name!=""},
+    "app","infra","name",".+"),
+    "app","finpipe","name","finpipe-.*"),
+    "app","echo","name","echo-app"),
+    "app","traect","name","traect"),
+    "app","registry","name","registry-web"))
+```
+
+Panels: memory / CPU per application как Stat (now), Bar gauge (ranking) и stacked Time series (trend). Цвета приложений закреплены (pastel), `infra` — серый, чтобы визуально уходил в фон.
+
+Status: implemented на текущих cAdvisor metrics.
 
 ### 20 Backups
 
@@ -181,7 +226,7 @@ Operational questions:
 - Когда запускался Docker build cache cleanup?
 - Что произошло во время последнего maintenance task?
 
-Status: partially available для Docker container logs через Alloy -> Loki. systemd journal collection не настроен.
+Status: implemented для Docker container logs. Панели: log volume by level (семантичные цвета уровней error / warn / info / unknown), errors / warnings / panics, all container logs и textbox-фильтр `search`. Из-за отсутствия per-container labels (см. "Loki label reality") фильтрация текстовая, не по labels. systemd journal collection не настроен.
 
 ## Dashboard Standards
 
@@ -191,6 +236,7 @@ Dashboard names:
 
 - `00 Overview`
 - `10 Infrastructure`
+- `15 Applications`
 - `20 Backups`
 - `30 Services`
 - `40 Logs / Operations`
@@ -254,6 +300,8 @@ Stable Loki labels:
 - `job`
 - `service`
 - `host`
+
+Note: это target-состояние. Фактически (2026-07-25) Alloy пишет только `service_name="unknown_service"` + `detected_level`; см. "Loki label reality".
 
 Do not use high-cardinality values as labels:
 
@@ -487,17 +535,25 @@ Available heartbeat now:
 - `monitoring/compose.yaml` includes `cadvisor`, while `docker/monitoring.compose.yml` does not.
 - `monitoring/compose.yaml` uses explicit `monitoring` and `finpipe-shared` networks; `docker/monitoring.compose.yml` does not.
 - `monitoring/config/prometheus/prometheus.yml` scrape'ит `cadvisor`; `docker/prometheus.yml` does not.
-- Grafana provisioning files are not present in the repository.
-- Dashboard JSON files are not present in the repository.
+- Grafana dashboards созданы live в Grafana (folder `The Hub`), но provisioning files и dashboard JSON пока не сохранены в репозиторий.
+- Фактические Loki labels (`service_name="unknown_service"`) не совпадают с target-labels (`job` / `service` / `host`) из этого документа — Alloy pipeline не добавляет container/systemd labels.
+- Дашборд `Infra / VPS` удалён, его содержимое перенесено в `10 Infrastructure`.
 - Alloy currently collects Docker logs, not systemd journal logs. Backup service LogQL panels require new Alloy journal config.
 - Backup scripts send Uptime Kuma Push heartbeats and logs, but do not expose Prometheus metrics.
 - `node-exporter` textfile collector is not configured in current compose/Prometheus setup.
 
 ## Recommended Implementation Order
 
+Done:
+
+- `10 Infrastructure`, `15 Applications`, `40 Logs / Operations` и базовый `00 Overview` реализованы на текущих `node-exporter` / `cadvisor` / Loki метриках.
+
+Next:
+
 1. Add backup metrics export through `node_exporter` textfile collector or another explicit Prometheus-compatible path.
 2. Create `20 Backups` Grafana dashboard from this catalog.
 3. Implement Docker build cache cleanup with metrics and journald/Loki logs.
-4. Improve `10 Infrastructure` dashboard using existing `node-exporter` and `cadvisor` metrics.
-5. Create `00 Overview` after backup and infrastructure panels are stable.
+4. Добавить container/systemd labels в Alloy pipeline, затем перевести Loki-панели на label-based queries.
+5. Extend `00 Overview` backup status summary после появления backup metrics.
 6. Add service-specific dashboards only when services expose real metrics.
+7. Сохранить dashboard JSON и provisioning files в репозиторий (см. "Version Control And Provisioning").
