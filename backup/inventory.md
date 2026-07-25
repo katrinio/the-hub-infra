@@ -13,8 +13,8 @@
 
 | Crit | System | Component | Location | Backup Method | Schedule | Retention | Notes |
 |---|---|---|---|---|---|---|---|
-| 🟡 | Traect | SQLite | `/home/katrin/projects/traect/data/traect.db` | SQLite Backup API | daily `05:30` via user crontab | `30 days` | Existing application-managed backup. Live database is never copied with `cp` |
-| 🟡 | Echo | SQLite | `/home/katrin/data/echo/echo.db` | SQLite Backup API | daily `05:15` via user crontab | `30 days` | Existing application-managed backup. Hardcoded monitoring URL is technical debt and must not be copied into Git |
+| 🟡 | Traect | SQLite | `/home/katrin/projects/traect/data/traect.db` | SQLite Backup API | Planned unified backup | `30 days` | Infrastructure-managed target. Existing application backup and cron stay in place until unified backup is validated |
+| 🟡 | Echo | SQLite | `/home/katrin/data/echo/echo.db` | SQLite Backup API | Planned unified backup | `30 days` | Infrastructure-managed target. Existing application backup and cron stay in place until unified backup is validated |
 | 🟡 | Postbox | SQLite | `/home/katrin/projects/postbox/data/postbox.db` expected path | SQLite Backup API | No active schedule confirmed | TODO | Application-managed. Not yet deployed |
 | 🟡 | Uptime Kuma | SQLite | `/home/katrin/projects/uptime-kuma/data/kuma.db` | SQLite Backup API | Planned | `30 days` | Infrastructure-managed. `Journal mode: wal`. Live database is never copied with `cp` |
 | 🟡 | Grafana | SQLite | `/var/lib/docker/volumes/monitoring_grafana-data/_data/grafana.db` | SQLite Backup API | Planned | `30 days` | Infrastructure-managed. Root-level read permission required |
