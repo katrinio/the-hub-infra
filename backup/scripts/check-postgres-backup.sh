@@ -12,14 +12,18 @@ file_mtime_epoch() {
   stat -f '%m' "${file}" 2>/dev/null || stat -c '%Y' "${file}"
 }
 
+postgres_backup_subdir() {
+  local output_name=$1
+  printf '%s/%s' "${POSTGRES_BACKUP_DIR}" "${output_name}"
+}
+
 latest_dump_for_prefix() {
   local backup_dir=$1
-  local output_name=$2
   local latest=""
   local file
 
   shopt -s nullglob
-  for file in "${backup_dir}/${output_name}_"*.dump; do
+  for file in "${backup_dir}"/*.dump; do
     latest="${file}"
   done
   shopt -u nullglob
@@ -32,9 +36,11 @@ latest_dump_for_prefix() {
 check_dump() {
   local system=$1
   local output_name=$2
-  local latest_dump age_hours now mtime
+  local backup_dir latest_dump age_hours now mtime
 
-  latest_dump="$(latest_dump_for_prefix "${POSTGRES_BACKUP_DIR}" "${output_name}")"
+  backup_dir="$(postgres_backup_subdir "${output_name}")"
+  latest_dump="$(latest_dump_for_prefix "${backup_dir}")"
+
   if [[ -z "${latest_dump}" ]]; then
     log_error "no dump found for ${system} (${output_name})"
     return 1

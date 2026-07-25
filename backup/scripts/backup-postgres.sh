@@ -7,11 +7,11 @@ set -Eeuo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${script_dir}/lib/common.sh"
 
-cleanup_partial_file() {
-  local output_file=${1:-}
-  if [[ -n "${output_file}" && -f "${output_file}" ]]; then
-    rm -f -- "${output_file}"
-    log_warn "removed incomplete dump: ${output_file}"
+cleanup_temp_file() {
+  local temp_file=${1:-}
+  if [[ -n "${temp_file}" && -e "${temp_file}" ]]; then
+    rm -f -- "${temp_file}"
+    log_warn "removed temporary file: ${temp_file}"
   fi
 }
 
@@ -22,25 +22,14 @@ container_is_running() {
   [[ "${state}" == "true" ]]
 }
 
-apply_retention() {
-  local backup_dir=$1
-  local output_name=$2
-  local retention_days=$3
-  local pattern="${backup_dir}/${output_name}_"'*.dump'
-  local file
+contains_unsafe_field_chars() {
+  local value=${1:-}
+  [[ "${value}" == *$'\n'* || "${value}" == *$'\r'* || "${value}" == *'|'* ]]
+}
 
-  shopt -s nullglob
-  for file in ${pattern}; do
-    if [[ "${DRY_RUN:-0}" == "1" ]]; then
-      log_info "DRY_RUN=1: would evaluate retention for ${file}"
-      continue
-    fi
-    if find "${file}" -type f -mtime +"${retention_days}" -print -quit | grep -q .; then
-      rm -f -- "${file}"
-      log_info "removed expired dump: ${file}"
-    fi
-  done
-  shopt -u nullglob
+postgres_backup_subdir() {
+  local output_name=$1
+  printf '%s/%s' "${POSTGRES_BACKUP_DIR}" "${output_name}"
 }
 
 backup_database() {
@@ -50,12 +39,19 @@ backup_database() {
   local user=$4
   local output_name=$5
   local criticality=$6
-  local timestamp output_file size_bytes
+  local timestamp backup_dir final_file temp_file size_bytes
 
-  timestamp="$(date '+%Y-%m-%d_%H-%M-%S')"
-  output_file="${POSTGRES_BACKUP_DIR}/${output_name}_${timestamp}.dump"
+  if contains_unsafe_field_chars "${system}" || contains_unsafe_field_chars "${container}" || contains_unsafe_field_chars "${database}" || contains_unsafe_field_chars "${user}" || contains_unsafe_field_chars "${output_name}" || contains_unsafe_field_chars "${criticality}"; then
+    log_error "unsafe characters found in config row for ${system}"
+    return 1
+  fi
 
-  log_info "starting backup: system=${system} database=${database} criticality=${criticality}"
+  timestamp="$(TZ=UTC date '+%Y-%m-%dT%H-%M-%SZ')"
+  backup_dir="$(postgres_backup_subdir "${output_name}")"
+  final_file="${backup_dir}/${output_name}_${timestamp}.dump"
+  temp_file="${backup_dir}/.${output_name}_${timestamp}.tmp.dump"
+
+  log_info "database backup started: system=${system} database=${database} criticality=${criticality}"
 
   if ! container_is_running "${container}"; then
     log_error "container is not running: ${container}"
@@ -63,23 +59,41 @@ backup_database() {
   fi
 
   if [[ "${DRY_RUN:-0}" == "1" ]]; then
-    log_info "DRY_RUN=1: would create ${output_file} from ${container}/${database}"
+    log_info "DRY_RUN=1: would create ${final_file} from ${container}/${database}"
     return 0
   fi
 
-  trap 'cleanup_partial_file "${output_file}"' ERR
-  if docker exec "${container}" pg_dump -U "${user}" -d "${database}" -Fc > "${output_file}"; then
+  ensure_directory "${backup_dir}"
+
+  trap 'cleanup_temp_file "${temp_file}"' ERR
+  if ! docker exec "${container}" pg_dump -U "${user}" -d "${database}" -Fc > "${temp_file}"; then
+    cleanup_temp_file "${temp_file}"
     trap - ERR
-  else
-    cleanup_partial_file "${output_file}"
-    trap - ERR
-    log_error "backup failed: system=${system} database=${database}"
+    log_error "error: backup failed for system=${system} database=${database}"
     return 1
   fi
 
-  size_bytes="$(wc -c < "${output_file}")"
-  log_info "backup completed: ${output_file} (${size_bytes} bytes)"
-  apply_retention "${POSTGRES_BACKUP_DIR}" "${output_name}" "${POSTGRES_RETENTION_DAYS}"
+  if [[ ! -s "${temp_file}" ]]; then
+    log_error "error: temporary dump is empty: ${temp_file}"
+    cleanup_temp_file "${temp_file}"
+    trap - ERR
+    return 1
+  fi
+
+  if ! docker exec -i "${container}" pg_restore --list < "${temp_file}" >/dev/null; then
+    log_error "error: validation failed for system=${system} database=${database}"
+    cleanup_temp_file "${temp_file}"
+    trap - ERR
+    return 1
+  fi
+
+  log_info "validation completed: system=${system} database=${database}"
+
+  mv -f -- "${temp_file}" "${final_file}"
+  trap - ERR
+
+  size_bytes="$(wc -c < "${final_file}")"
+  log_info "database backup completed: ${final_file} (${size_bytes} bytes)"
   return 0
 }
 
@@ -101,13 +115,14 @@ main() {
   require_file "${postgres_conf}"
 
   : "${POSTGRES_BACKUP_DIR:?POSTGRES_BACKUP_DIR is required}"
-  : "${POSTGRES_RETENTION_DAYS:?POSTGRES_RETENTION_DAYS is required}"
   : "${BACKUP_LOCK_FILE:?BACKUP_LOCK_FILE is required}"
   : "${KUMA_PUSH_URL_FILE:?KUMA_PUSH_URL_FILE is required}"
 
   ensure_directory "${POSTGRES_BACKUP_DIR}"
   acquire_lock "${BACKUP_LOCK_FILE}"
   trap release_lock EXIT
+
+  log_info "starting PostgreSQL backup"
 
   while IFS= read -r line || [[ -n "${line}" ]]; do
     [[ -z "${line}" ]] && continue
@@ -138,7 +153,7 @@ main() {
     return 1
   fi
 
-  log_info "postgres backup finished successfully"
+  log_info "all PostgreSQL backups completed"
   push_kuma_status "up" "postgres backup finished successfully"
 }
 

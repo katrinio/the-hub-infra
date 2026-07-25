@@ -4,10 +4,11 @@
 
 ## Responsibilities
 
-- Application-managed: `Finpipe`, `Traect`, `Echo`, `Postbox`
-- Infrastructure-managed: `Yo Registry`, `Uptime Kuma`, `Grafana`
+- Application-managed: `Traect`, `Echo`, `Postbox`
+- Infrastructure-managed: `Finpipe`, `Yo Registry`, `Uptime Kuma`, `Grafana`
 
 Application-owned рабочие скрипты не заменяются, если они уже существуют и подтверждены в эксплуатации.
+Существующий Finpipe backup-механизм пока не удаляется до проверки новой unified PostgreSQL схемы.
 
 ## PostgreSQL
 

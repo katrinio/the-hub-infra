@@ -10,12 +10,12 @@
 
 Текущая схема:
 
-- PostgreSQL dumps: `/srv/backups/staging/postgres`
+- PostgreSQL dumps root: configurable `POSTGRES_BACKUP_DIR`
 - SQLite dumps: `/srv/backups/staging/sqlite`
 
 Инфраструктурные скрипты управляют только:
 
-- PostgreSQL: `Yo Registry`
+- PostgreSQL: `Finpipe`, `Yo Registry`
 - SQLite: `Uptime Kuma`, `Grafana`
 
 Существующие application-managed backup-скрипты остаются на месте и не заменяются:
@@ -23,10 +23,11 @@
 - `Traect`
 - `Echo`
 - `Postbox`
-- `Finpipe`
 
 Старый `/opt/backups/registry_backup.sh` пока не удалять. Отключать старый Registry backup можно
 только после проверки новой схемы.
+Существующий Finpipe backup-механизм тоже пока не удалять. Отключать его можно только после
+проверки новой unified PostgreSQL схемы.
 
 ## Документы
 
@@ -45,8 +46,15 @@ restore-сценария.
 Ожидаемые места для staging dumps:
 
 ```text
-/srv/backups/staging/postgres
+/opt/backups/postgres/<database>/
 /srv/backups/staging/sqlite
+```
+
+Для текущего VPS PostgreSQL dump directories должны быть такими:
+
+```text
+/opt/backups/postgres/finpipe
+/opt/backups/postgres/registry
 ```
 
 ## Filesystem Backup Scope
@@ -92,7 +100,7 @@ Filesystem локально не копируется в staging.
 2. Создать `/etc/the-hub-backup/postgres.conf`.
 3. Создать `/etc/the-hub-backup/sqlite.conf`.
 4. Выполнить `DRY_RUN=1`.
-5. Выполнить один ручной Registry backup.
+5. Выполнить один ручной PostgreSQL backup для `Finpipe` и `Yo Registry`.
 6. Выполнить один ручной SQLite backup для `Uptime Kuma` и `Grafana`.
 7. Проверить PostgreSQL dump через `pg_restore --list`.
 8. Проверить SQLite dump через `sqlite3 backup.db 'PRAGMA integrity_check;'`.
@@ -105,14 +113,14 @@ Filesystem локально не копируется в staging.
 
 ```bash
 DRY_RUN=1 BACKUP_ENV_FILE=/etc/the-hub-backup/backup.env \
-SQLITE_BACKUP_CONFIG=/etc/the-hub-backup/sqlite.conf \
-/home/katrin/projects/the-hub-infra/backup/scripts/backup-sqlite.sh
+POSTGRES_BACKUP_CONFIG=/etc/the-hub-backup/postgres.conf \
+/home/katrin/projects/the-hub-infra/backup/scripts/backup-postgres.sh
 ```
 
 ## Manual Verification Example
 
 ```bash
-/home/katrin/projects/the-hub-infra/backup/scripts/check-sqlite-backup.sh
+/home/katrin/projects/the-hub-infra/backup/scripts/check-postgres-backup.sh
 ```
 
 ## Operational Note
@@ -122,14 +130,15 @@ SQLITE_BACKUP_CONFIG=/etc/the-hub-backup/sqlite.conf \
 Фактический скрипт находится по пути `/opt/backups/registry_backup.sh`.
 Это уже существующий broken scheduler и требует отдельного ручного исправления.
 
-## Migration Checklist For Registry
+## Migration Checklist For PostgreSQL
 
 1. Создать `/etc/the-hub-backup/backup.env`.
 2. Создать `/etc/the-hub-backup/postgres.conf`.
 3. Выполнить `DRY_RUN=1`.
-4. Выполнить один ручной Registry backup.
-5. Проверить файл через `pg_restore --list`.
-6. Установить systemd units.
-7. Дождаться успешного автоматического запуска.
-8. Только после этого отключить старый scheduler.
-9. Старый скрипт удалить позже отдельным действием.
+4. Установить `POSTGRES_BACKUP_DIR=/opt/backups/postgres`.
+5. Выполнить один ручной backup для `Finpipe` и `Yo Registry`.
+6. Проверить оба файла через `pg_restore --list`.
+7. Установить systemd units.
+8. Дождаться успешного автоматического запуска.
+9. Только после этого отключить старые scheduler jobs отдельным действием.
+10. Старые скрипты удалить позже отдельным действием.

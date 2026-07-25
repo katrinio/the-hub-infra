@@ -6,7 +6,5 @@
 # Format:
 # system|container|database|user|output_name|criticality
 #
-# Finpipe database backup is application-managed:
-# /home/katrin/projects/finpipe/src/workflows/monitoring/backup_database.py
-
-Yo Registry|finpipe-postgres-1|registry|finpipe|yo-registry|critical
+Finpipe|finpipe-postgres-1|finpipe|finpipe|finpipe|critical
+Yo Registry|finpipe-postgres-1|registry|finpipe|registry|critical
