@@ -13,6 +13,17 @@
 - PostgreSQL dumps root: configurable `POSTGRES_BACKUP_DIR`
 - SQLite dumps: `/srv/backups/staging/sqlite`
 
+SQLite inventory uses the preferred format:
+
+```text
+system|source_kind|source_ref|output_name|retention_days|criticality
+```
+
+Supported SQLite source kinds:
+
+- `host_path` for host-visible database files backed up via SQLite `.backup`
+- `docker_cp` for container-visible database files copied to a temporary host file and validated before rename
+
 Инфраструктурные скрипты управляют только:
 
 - PostgreSQL: `Finpipe`, `Yo Registry`
@@ -130,6 +141,9 @@ POSTGRES_BACKUP_CONFIG=/etc/the-hub-backup/postgres.conf \
 
 Для `Echo` и `Traect` существующие application backup scripts и cron jobs пока не удаляются.
 Отключать их можно только после проверки unified SQLite backup на production VPS.
+
+Для `Grafana` unified SQLite backup должен использовать container source
+`grafana:/var/lib/grafana/grafana.db`, а не прямой доступ к Docker volume path на host.
 
 ## Migration Checklist For PostgreSQL
 
