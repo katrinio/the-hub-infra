@@ -12,9 +12,43 @@ Dashboard configuration в Grafana не должен быть единствен
 - `monitoring/config/prometheus/prometheus.yml` scrape'ит `prometheus`, `node-exporter`, `cadvisor`.
 - `monitoring/config/alloy/config.alloy` читает Docker container logs через Docker socket и отправляет их в `Loki`.
 - `docker/monitoring.compose.yml`, `docker/prometheus.yml` и `docker/alloy-config.alloy` являются похожей monitoring-конфигурацией старого layout. В ней нет `cadvisor` и нет явных networks.
-- Grafana dashboards и datasource provisioning files в репозитории сейчас не найдены.
+- Grafana dashboards созданы и работают в самой Grafana (folder `The Hub`, Grafana 13.1.0 OSS), но provisioning/JSON files в репозитории пока не сохранены. Актуальное состояние см. в разделе "Current Grafana Implementation".
 - `Uptime Kuma` описан отдельно в `docker/uptime-kuma.compose.yml`.
 - Backup scripts пишут human-readable logs и отправляют heartbeat в Uptime Kuma Push monitors, но не экспортируют Prometheus metrics.
+
+## Current Grafana Implementation
+
+Фактическое состояние Grafana на 2026-07-25, Grafana `13.1.0` OSS.
+
+Datasources, используемые dashboards:
+
+- Prometheus — uid `afpxbacgo8tmod`, url `http://prometheus:9090`.
+- Loki — uid `bfpx8fz5l1j40d`, url `http://loki:3100` (default datasource).
+- PostgreSQL — `grafana-postgresql-datasource`, `grafana-postgresql-finpipe` (для FinPipe dashboards, вне scope этого документа).
+
+Folder `The Hub` (uid `dft7iaru6t8u8a`) содержит dashboards, созданные вручную через Grafana API:
+
+| Dashboard | uid | Status |
+|---|---|---|
+| 00 Overview | `the-hub-00-overview` | implemented (infra + logs summary) |
+| 10 Infrastructure | `the-hub-10-infra` | implemented |
+| 15 Applications | `the-hub-15-apps` | implemented |
+| 40 Logs / Operations | `the-hub-40-logs` | implemented |
+
+Не созданы (нет метрик): `20 Backups`, `30 Services` — остаются instrumentation required.
+
+Dashboards вне folder `The Hub` (существовали ранее, не трогались):
+
+- `Cadvisor exporter` — сырой per-container drill-down с переменными `host` / `container`.
+- `FinPipe`, `container_memory_usage_bytes`.
+
+Удалён: `Infra / VPS` — его панели (CPU / RAM / Disk / Network / Load / Uptime) перенесены в `10 Infrastructure` (в Grafana Recently deleted ~30 дней).
+
+### Loki label reality
+
+Alloy сейчас пишет Docker-логи в Loki одним stream'ом `service_name="unknown_service"` (плюс `detected_level`), без per-container и systemd labels. Поэтому LogQL-панели построены на текстовых фильтрах и `detected_level`, а не на стабильных labels `job` / `service` / `host`, описанных ниже как target-состояние. Для label-based queries требуется доработка Alloy pipeline (container labels + journal source).
+
+Loki self-audit noise: контейнеры `grafana` и `loki` шлют свой stdout в Loki, поэтому error-панели исключают строки собственных запросов Loki фильтром `!= "query_hash="`.
 
 ## Architecture Diagram
 
@@ -91,7 +125,7 @@ Operational questions:
 - Есть ли всплеск systemd/container errors?
 - Нужен ли immediate investigation?
 
-Status: planned. Требует backup metrics и базовые infrastructure panels.
+Status: implemented (частично). Реализованы infrastructure health, monitoring target health и recent errors из Loki. Backup status summary остаётся instrumentation required.
 
 ### 10 Infrastructure
 
