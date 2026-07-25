@@ -178,6 +178,8 @@ Operational questions:
 
 Status: implemented. Панели: CPU / Memory / Disk (gauge с порогами 70/90), CPU / Memory trends с пороговой раскраской, Load average, Network traffic, Uptime, disk usage by mount (bar gauge), filesystem free bytes и Filesystem free (/), container CPU / memory (cAdvisor), Prometheus scrape health (table) и Target status. Load / Network / Uptime перенесены из удалённого `Infra / VPS`.
 
+Секция `Docker build cache cleanup` (row внизу дашборда): bar gauge `before / after / reclaimed` (bytes IEC), stat `Last cleanup status` (`1` = Success / `0` = Failed), stat `Last successful cleanup age` (duration, пороги под twice-monthly расписание), stat `Cleanup duration` (seconds). Docker build cache — infrastructure/maintenance concern; в архитектуре он числится за `20 Backups`, но т.к. тот дашборд ещё не создан, панели добавлены сюда, а не в ad-hoc дашборд.
+
 ### 15 Applications
 
 Purpose: сколько ресурсов занимает каждое приложение, без шума от инфраструктуры.
@@ -362,6 +364,7 @@ Provisioning strategy:
 Status values:
 
 - `available`: current repository config can produce this data.
+- `implemented`: metric exists and is visualized on a dashboard panel.
 - `planned`: target panel is part of dashboard architecture, but implementation is not complete.
 - `instrumentation required`: component changes are required before metric exists.
 
@@ -399,11 +402,14 @@ Status values:
 | 40 Logs / Operations | Docker cache cleanup logs | Что произошло во время cleanup? | `the-hub-docker-build-cache-cleanup.service` | Loki | systemd journal | `{job="docker-cache-cleanup", service="the-hub-docker-build-cache-cleanup"}` | logs | instrumentation required |
 | 40 Logs / Operations | Docker cache cleanup errors | Были ли cleanup errors? | `the-hub-docker-build-cache-cleanup.service` | Loki | systemd journal | `{job="docker-cache-cleanup", service="the-hub-docker-build-cache-cleanup"} |= "ERROR"` | logs | instrumentation required |
 | 40 Logs / Operations | Latest successful Docker cache cleanup | Когда cleanup последний раз успешно завершился? | Docker cache cleanup script | Prometheus | `docker_build_cache_last_success_timestamp_seconds` | `time() - docker_build_cache_last_success_timestamp_seconds` | seconds | available |
-| 20 Backups | Docker build cache before cleanup | Сколько cache было registered before cleanup? | Docker cache cleanup script | Prometheus | `docker_build_cache_before_bytes` | `docker_build_cache_before_bytes` | bytes | available |
-| 20 Backups | Docker build cache after cleanup | Сколько cache осталось after cleanup? | Docker cache cleanup script | Prometheus | `docker_build_cache_after_bytes` | `docker_build_cache_after_bytes` | bytes | available |
-| 20 Backups | Docker build cache reclaimed | Сколько места освободили? | Docker cache cleanup script | Prometheus | `docker_build_cache_before_bytes`, `docker_build_cache_after_bytes`, `docker_build_cache_reclaimed_bytes` | `docker_build_cache_reclaimed_bytes = max(docker_build_cache_before_bytes - docker_build_cache_after_bytes, 0)` | bytes | available |
-| 20 Backups | Docker build cache last cleanup age | Когда cleanup запускался последний раз? | Docker cache cleanup script | Prometheus | `docker_build_cache_last_run_timestamp_seconds` | `time() - docker_build_cache_last_run_timestamp_seconds` | seconds | available |
-| 20 Backups | Docker build cache cleanup status | Cleanup успешен? | Docker cache cleanup script | Prometheus | `docker_build_cache_prune_success` | `docker_build_cache_prune_success`; `1` = success, `0` = failure | 0/1 | available |
+| 10 Infrastructure | Docker build cache before cleanup | Сколько cache было до cleanup? | Docker cache cleanup script | Prometheus | `docker_build_cache_before_bytes` | `docker_build_cache_before_bytes` | bytes (IEC) | implemented |
+| 10 Infrastructure | Docker build cache after cleanup | Сколько cache осталось после cleanup? | Docker cache cleanup script | Prometheus | `docker_build_cache_after_bytes` | `docker_build_cache_after_bytes` | bytes (IEC) | implemented |
+| 10 Infrastructure | Docker build cache reclaimed | Сколько места освободили? (`0` = valid) | Docker cache cleanup script | Prometheus | `docker_build_cache_reclaimed_bytes` | `docker_build_cache_reclaimed_bytes` | bytes (IEC) | implemented |
+| 10 Infrastructure | Docker build cache cleanup status | Последний cleanup успешен? | Docker cache cleanup script | Prometheus | `docker_build_cache_prune_success` | `docker_build_cache_prune_success`; `1` = Success, `0` = Failed | 0/1 | implemented |
+| 10 Infrastructure | Docker build cache last successful cleanup age | Насколько давно был успешный cleanup? | Docker cache cleanup script | Prometheus | `docker_build_cache_last_success_timestamp_seconds` | `time() - docker_build_cache_last_success_timestamp_seconds` | seconds (duration) | implemented |
+| 10 Infrastructure | Docker build cache cleanup duration | Сколько длился последний cleanup? | Docker cache cleanup script | Prometheus | `docker_build_cache_cleanup_duration_seconds` | `docker_build_cache_cleanup_duration_seconds` | seconds | implemented |
+
+> Примечание: numeric Docker build cache метрики документированы в архитектуре под `20 Backups`, но этот дашборд ещё не создан (backup instrumentation отсутствует). Панели реализованы в существующем `10 Infrastructure` (категория Infrastructure / maintenance), чтобы не плодить ad-hoc дашборд. Метрика `docker_build_cache_last_run_timestamp_seconds` также экспортируется, но на панель не выведена (для возраста используется `..._last_success_timestamp_seconds`).
 
 ## Backup Metrics Contract
 
@@ -484,13 +490,22 @@ Last successful cleanup age:
 time() - docker_build_cache_last_success_timestamp_seconds
 ```
 
-Required Grafana panels:
+Implemented Grafana panels:
 
-- `Registered`: cache before cleanup.
-- `After cleanup`: cache after cleanup.
-- `Reclaimed space`: reclaimed bytes.
-- `Last cleanup time`: latest successful run timestamp.
-- `Cleanup status`: success/failure.
+Расположение: dashboard `10 Infrastructure` (uid `the-hub-10-infra`), row `Docker build cache cleanup`. Datasource: Prometheus (`afpxbacgo8tmod`). Все targets — instant queries, без дополнительных labels.
+
+- Bar gauge `Docker build cache (before / after / reclaimed)` — `docker_build_cache_before_bytes`, `docker_build_cache_after_bytes`, `docker_build_cache_reclaimed_bytes`, unit `bytes` (IEC). Нейтральный цвет: `reclaimed = 0` не помечается как ошибка.
+- Stat `Last cleanup status` — `docker_build_cache_prune_success`, value mapping `1` = Success (green) / `0` = Failed (red).
+- Stat `Last successful cleanup age` — `time() - docker_build_cache_last_success_timestamp_seconds`, unit `dtdurations`.
+- Stat `Cleanup duration` — `docker_build_cache_cleanup_duration_seconds`, unit `s`.
+
+Stale threshold (для `Last successful cleanup age`):
+
+Cleanup выполняется 1-го и 15-го числа каждого месяца. Максимальный нормальный интервал между запусками — с 15-го по 1-е следующего месяца, до ~17 дней. Поэтому короткий порог давал бы ложные срабатывания. Пороги:
+
+- green: `< 18 days` (`1555200 s`) — норма;
+- yellow: `>= 18 days` — запуск, возможно, задержан;
+- red: `>= 21 days` (`1814400 s`) — плановый запуск явно пропущен.
 
 Required Loki logs:
 
