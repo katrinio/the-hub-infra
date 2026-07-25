@@ -53,6 +53,18 @@ monitoring/README.md
 
 ⸻
 
+🛠 Maintenance
+
+Infrastructure-managed maintenance tasks:
+
+maintenance/README.md
+
+Состав:
+
+* Docker build cache cleanup — twice monthly cleanup with Prometheus metrics
+
+⸻
+
 💚 Status & Alerts
 
 Проверка доступности сервисов и уведомления в Telegram.

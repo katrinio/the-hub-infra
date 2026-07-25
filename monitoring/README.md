@@ -90,14 +90,14 @@ This task only makes Loki retention explicit. journald retention, Docker log rot
 ## Architecture Diagram
 
 ```text
-node-exporter ───────────────→ Prometheus ─┐
-cadvisor ────────────────────→ Prometheus ─┤
-backup textfile metrics ─────→ Prometheus ─┤  planned / instrumentation required
-docker-cache metrics ────────→ Prometheus ─┤  planned / instrumentation required
-                                           ├→ Grafana
-Docker container logs ─→ Alloy ─→ Loki ────┤
-systemd journal ───────→ Alloy ─→ Loki ────┤  planned / instrumentation required
-Uptime Kuma ───────────────────────────────┘  heartbeat layer, not metric source of truth
+node-exporter ────────────────→ Prometheus ─┐
+cadvisor ─────────────────────→ Prometheus ─┤
+backup textfile metrics ──────→ Prometheus ─┤  planned / instrumentation required
+docker-cache textfile metrics → Prometheus ─┤
+                                            ├→ Grafana
+Docker container logs ──→ Alloy ─→ Loki ────┤
+systemd journal ────────→ Alloy ─→ Loki ────┤  planned / instrumentation required
+Uptime Kuma ────────────────────────────────┘  heartbeat layer, not metric source of truth
 ```
 
 ## Datasource Responsibilities
@@ -396,14 +396,14 @@ Status values:
 | 40 Logs / Operations | Systemd errors | Какие systemd units пишут errors? | Alloy journal source | Loki | systemd journal | `{job="systemd"} |= "ERROR"` with labels `service`, `host` | logs | instrumentation required |
 | 40 Logs / Operations | PostgreSQL backup errors | Почему PostgreSQL backup failed? | systemd journal | Loki | `the-hub-postgres-backup.service` stdout/stderr | `{job="systemd", service="the-hub-postgres-backup"} |= "ERROR"` | logs | instrumentation required |
 | 40 Logs / Operations | SQLite backup errors | Почему SQLite backup failed? | systemd journal | Loki | `the-hub-sqlite-backup.service` stdout/stderr | `{job="systemd", service="the-hub-sqlite-backup"} |= "ERROR"` | logs | instrumentation required |
-| 40 Logs / Operations | Docker cache cleanup logs | Что произошло во время cleanup? | `docker-build-cache-prune.service` | Loki | systemd journal | `{job="docker-cache-cleanup", service="docker-build-cache-prune"}` | logs | instrumentation required |
-| 40 Logs / Operations | Docker cache cleanup errors | Были ли cleanup errors? | `docker-build-cache-prune.service` | Loki | systemd journal | `{job="docker-cache-cleanup", service="docker-build-cache-prune"} |= "ERROR"` | logs | instrumentation required |
-| 40 Logs / Operations | Latest successful Docker cache cleanup | Когда cleanup последний раз успешно завершился? | Docker cache cleanup script | Loki / Prometheus | log line and planned metric | Prefer Prometheus `docker_build_cache_last_run_timestamp_seconds`; Loki fallback query only for investigation | Unix seconds | instrumentation required |
-| 20 Backups | Docker build cache before cleanup | Сколько cache было registered before cleanup? | Docker cache cleanup script | Prometheus | `docker_build_cache_before_bytes` | `docker_build_cache_before_bytes` | bytes | instrumentation required |
-| 20 Backups | Docker build cache after cleanup | Сколько cache осталось after cleanup? | Docker cache cleanup script | Prometheus | `docker_build_cache_after_bytes` | `docker_build_cache_after_bytes` | bytes | instrumentation required |
-| 20 Backups | Docker build cache reclaimed | Сколько места освободили? | Docker cache cleanup script | Prometheus | `docker_build_cache_before_bytes`, `docker_build_cache_after_bytes`, `docker_build_cache_reclaimed_bytes` | `docker_build_cache_reclaimed_bytes = docker_build_cache_before_bytes - docker_build_cache_after_bytes` | bytes | instrumentation required |
-| 20 Backups | Docker build cache last cleanup time | Когда cleanup запускался последний раз? | Docker cache cleanup script | Prometheus | `docker_build_cache_last_run_timestamp_seconds` | `docker_build_cache_last_run_timestamp_seconds` | Unix seconds | instrumentation required |
-| 20 Backups | Docker build cache cleanup status | Cleanup успешен? | Docker cache cleanup script | Prometheus | `docker_build_cache_prune_success` | `docker_build_cache_prune_success` | 0/1 | instrumentation required |
+| 40 Logs / Operations | Docker cache cleanup logs | Что произошло во время cleanup? | `the-hub-docker-build-cache-cleanup.service` | Loki | systemd journal | `{job="docker-cache-cleanup", service="the-hub-docker-build-cache-cleanup"}` | logs | instrumentation required |
+| 40 Logs / Operations | Docker cache cleanup errors | Были ли cleanup errors? | `the-hub-docker-build-cache-cleanup.service` | Loki | systemd journal | `{job="docker-cache-cleanup", service="the-hub-docker-build-cache-cleanup"} |= "ERROR"` | logs | instrumentation required |
+| 40 Logs / Operations | Latest successful Docker cache cleanup | Когда cleanup последний раз успешно завершился? | Docker cache cleanup script | Prometheus | `docker_build_cache_last_success_timestamp_seconds` | `time() - docker_build_cache_last_success_timestamp_seconds` | seconds | available |
+| 20 Backups | Docker build cache before cleanup | Сколько cache было registered before cleanup? | Docker cache cleanup script | Prometheus | `docker_build_cache_before_bytes` | `docker_build_cache_before_bytes` | bytes | available |
+| 20 Backups | Docker build cache after cleanup | Сколько cache осталось after cleanup? | Docker cache cleanup script | Prometheus | `docker_build_cache_after_bytes` | `docker_build_cache_after_bytes` | bytes | available |
+| 20 Backups | Docker build cache reclaimed | Сколько места освободили? | Docker cache cleanup script | Prometheus | `docker_build_cache_before_bytes`, `docker_build_cache_after_bytes`, `docker_build_cache_reclaimed_bytes` | `docker_build_cache_reclaimed_bytes = max(docker_build_cache_before_bytes - docker_build_cache_after_bytes, 0)` | bytes | available |
+| 20 Backups | Docker build cache last cleanup age | Когда cleanup запускался последний раз? | Docker cache cleanup script | Prometheus | `docker_build_cache_last_run_timestamp_seconds` | `time() - docker_build_cache_last_run_timestamp_seconds` | seconds | available |
+| 20 Backups | Docker build cache cleanup status | Cleanup успешен? | Docker cache cleanup script | Prometheus | `docker_build_cache_prune_success` | `docker_build_cache_prune_success`; `1` = success, `0` = failure | 0/1 | available |
 
 ## Backup Metrics Contract
 
@@ -439,18 +439,18 @@ Current status: instrumentation required. Existing scripts currently log to stdo
 
 Feature: Automatic Docker build cache cleanup with Grafana metrics.
 
-Status: planned / instrumentation required.
+Status: implemented. Metrics are exported through `node_exporter` textfile collector.
 
-Planned process:
+Process:
 
 1. Run twice per month.
 2. Measure Docker build cache before cleanup.
-3. Run `docker builder prune`.
+3. Run `docker builder prune -af`.
 4. Measure Docker build cache after cleanup.
 5. Export metrics to Prometheus.
 6. Log cleanup to journald and Loki.
 
-Preferred metric transport: `node_exporter` textfile collector, if it fits the existing monitoring architecture.
+Metric transport: `node_exporter` textfile collector.
 
 Planned metrics:
 
@@ -459,15 +459,29 @@ docker_build_cache_before_bytes
 docker_build_cache_after_bytes
 docker_build_cache_reclaimed_bytes
 docker_build_cache_last_run_timestamp_seconds
+docker_build_cache_last_success_timestamp_seconds
 docker_build_cache_prune_success
+docker_build_cache_cleanup_duration_seconds
 ```
 
 Formula:
 
 ```text
 docker_build_cache_reclaimed_bytes
-  = docker_build_cache_before_bytes
-    - docker_build_cache_after_bytes
+  = max(docker_build_cache_before_bytes
+        - docker_build_cache_after_bytes, 0)
+```
+
+Last cleanup age:
+
+```promql
+time() - docker_build_cache_last_run_timestamp_seconds
+```
+
+Last successful cleanup age:
+
+```promql
+time() - docker_build_cache_last_success_timestamp_seconds
 ```
 
 Required Grafana panels:
@@ -487,7 +501,7 @@ Required Loki logs:
 Stable Loki labels:
 
 - `job="docker-cache-cleanup"`
-- `service="docker-build-cache-prune"`
+- `service="the-hub-docker-build-cache-cleanup"`
 - `host=<current hostname>`
 
 Do not use cache sizes, timestamps or error messages as Loki labels.
@@ -505,8 +519,8 @@ Conceptual queries:
 {job="systemd", service="the-hub-sqlite-backup"}
 {job="systemd", service="the-hub-sqlite-backup"} |= "ERROR"
 
-{job="docker-cache-cleanup", service="docker-build-cache-prune"}
-{job="docker-cache-cleanup", service="docker-build-cache-prune"} |= "ERROR"
+{job="docker-cache-cleanup", service="the-hub-docker-build-cache-cleanup"}
+{job="docker-cache-cleanup", service="the-hub-docker-build-cache-cleanup"} |= "ERROR"
 
 {job="systemd"} |= "ERROR"
 ```
@@ -546,11 +560,6 @@ Available heartbeat now:
 - `backup_last_run_success`
 - `backup_size_bytes`
 - `backup_duration_seconds`
-- `docker_build_cache_before_bytes`
-- `docker_build_cache_after_bytes`
-- `docker_build_cache_reclaimed_bytes`
-- `docker_build_cache_last_run_timestamp_seconds`
-- `docker_build_cache_prune_success`
 - service-specific application metrics for `Finpipe`, `Yo Registry`, `Traect`, `Echo`.
 
 ## Discrepancies Found
@@ -564,20 +573,20 @@ Available heartbeat now:
 - Дашборд `Infra / VPS` удалён, его содержимое перенесено в `10 Infrastructure`.
 - Alloy currently collects Docker logs, not systemd journal logs. Backup service LogQL panels require new Alloy journal config.
 - Backup scripts send Uptime Kuma Push heartbeats and logs, but do not expose Prometheus metrics.
-- `node-exporter` textfile collector is not configured in current compose/Prometheus setup.
+- `node-exporter` textfile collector is configured for infrastructure-generated `.prom` files in `/var/lib/node_exporter/textfile_collector`.
 
 ## Recommended Implementation Order
 
 Done:
 
 - `10 Infrastructure`, `15 Applications`, `40 Logs / Operations` и базовый `00 Overview` реализованы на текущих `node-exporter` / `cadvisor` / Loki метриках.
+- Docker build cache cleanup metrics are implemented through `node_exporter` textfile collector.
 
 Next:
 
 1. Add backup metrics export through `node_exporter` textfile collector or another explicit Prometheus-compatible path.
 2. Create `20 Backups` Grafana dashboard from this catalog.
-3. Implement Docker build cache cleanup with metrics and journald/Loki logs.
-4. Добавить container/systemd labels в Alloy pipeline, затем перевести Loki-панели на label-based queries.
-5. Extend `00 Overview` backup status summary после появления backup metrics.
-6. Add service-specific dashboards only when services expose real metrics.
-7. Сохранить dashboard JSON и provisioning files в репозиторий (см. "Version Control And Provisioning").
+3. Добавить container/systemd labels в Alloy pipeline, затем перевести Loki-панели на label-based queries.
+4. Extend `00 Overview` backup status summary после появления backup metrics.
+5. Add service-specific dashboards only when services expose real metrics.
+6. Сохранить dashboard JSON и provisioning files в репозиторий (см. "Version Control And Provisioning").

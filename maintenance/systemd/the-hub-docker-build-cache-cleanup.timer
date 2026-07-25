@@ -1,0 +1,11 @@
+[Unit]
+Description=Twice monthly the-hub Docker build cache cleanup timer
+
+[Timer]
+OnCalendar=*-*-01,15 04:30:00
+Persistent=true
+RandomizedDelaySec=30m
+Unit=the-hub-docker-build-cache-cleanup.service
+
+[Install]
+WantedBy=timers.target

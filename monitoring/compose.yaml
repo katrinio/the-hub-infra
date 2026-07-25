@@ -63,7 +63,11 @@ services:
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
+    command:
+      - --collector.textfile.directory=/var/lib/node_exporter/textfile_collector
     pid: host
+    volumes:
+      - /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector:ro
     restart: unless-stopped
     networks:
       - monitoring
