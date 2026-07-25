@@ -1,0 +1,22 @@
+name: Shell Quality
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  shell-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install --yes shellcheck
+
+      - name: Run shell syntax checks
+        run: bash -n backup/scripts/*.sh
+
+      - name: Run ShellCheck
+        run: shellcheck -x --source-path=backup/scripts backup/scripts/*.sh

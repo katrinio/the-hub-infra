@@ -1,0 +1,10 @@
+# PostgreSQL backup inventory template.
+#
+# Real config path:
+# /etc/the-hub-backup/postgres.conf
+#
+# Format:
+# system|container|database|user|output_name|criticality
+#
+Finpipe|finpipe-postgres-1|finpipe|finpipe|finpipe|critical
+Yo Registry|finpipe-postgres-1|registry|finpipe|registry|critical

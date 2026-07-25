@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily the-hub SQLite backup timer
+
+[Timer]
+OnCalendar=*-*-* 05:45:00
+Persistent=true
+RandomizedDelaySec=15m
+Unit=the-hub-sqlite-backup.service
+
+[Install]
+WantedBy=timers.target
