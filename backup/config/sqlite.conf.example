@@ -8,9 +8,10 @@
 #
 # source_path must point to the host-visible production DB.
 #
-# Traect, Echo and Postbox are application-managed and intentionally absent.
 # Postbox is not yet deployed and must not be added to active infrastructure backup
 # until the production database exists.
 
+Traect|/home/katrin/projects/traect/data/traect.db|traect|30|important
+Echo|/home/katrin/data/echo/echo.db|echo|30|important
 Uptime Kuma|/home/katrin/projects/uptime-kuma/data/kuma.db|uptime-kuma|30|important
 Grafana|/var/lib/docker/volumes/monitoring_grafana-data/_data/grafana.db|grafana|30|important

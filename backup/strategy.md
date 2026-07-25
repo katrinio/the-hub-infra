@@ -4,11 +4,13 @@
 
 ## Responsibilities
 
-- Application-managed: `Traect`, `Echo`, `Postbox`
-- Infrastructure-managed: `Finpipe`, `Yo Registry`, `Uptime Kuma`, `Grafana`
+- Application-managed: `Postbox`
+- Infrastructure-managed: `Finpipe`, `Yo Registry`, `Traect`, `Echo`, `Uptime Kuma`, `Grafana`
 
 Application-owned рабочие скрипты не заменяются, если они уже существуют и подтверждены в эксплуатации.
 Существующий Finpipe backup-механизм пока не удаляется до проверки новой unified PostgreSQL схемы.
+Существующие backup scripts и cron jobs для `Traect` и `Echo` пока не удаляются до проверки unified
+SQLite backup схемы.
 
 ## PostgreSQL
 
@@ -24,8 +26,8 @@ Application-owned рабочие скрипты не заменяются, ес�
 - Для SQLite в `wal` mode это особенно важно, потому что согласованное состояние зависит от основного файла и sidecar-файлов WAL/SHM.
 - `sqlite3 .backup` использует SQLite backup API и создаёт согласованный snapshot.
 - Все SQLite-системы резервируются через SQLite Backup API.
-- Для infrastructure-managed SQLite backup используются `Uptime Kuma` и `Grafana`.
-- `Traect`, `Echo` и `Postbox` остаются application-managed.
+- Для infrastructure-managed SQLite backup используются `Traect`, `Echo`, `Uptime Kuma` и `Grafana`.
+- `Postbox` остаётся application-managed до фактического deployment production DB.
 - `Uptime Kuma` использует `wal` mode и поэтому должен резервироваться только безопасным snapshot-методом.
 - `Grafana` находится внутри Docker volume и требует чтения с root-level доступом.
 - `Postbox` остаётся inactive до фактического deployment production DB.

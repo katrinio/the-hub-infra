@@ -16,12 +16,10 @@
 Инфраструктурные скрипты управляют только:
 
 - PostgreSQL: `Finpipe`, `Yo Registry`
-- SQLite: `Uptime Kuma`, `Grafana`
+- SQLite: `Traect`, `Echo`, `Uptime Kuma`, `Grafana`
 
 Существующие application-managed backup-скрипты остаются на месте и не заменяются:
 
-- `Traect`
-- `Echo`
 - `Postbox`
 
 Старый `/opt/backups/registry_backup.sh` пока не удалять. Отключать старый Registry backup можно
@@ -101,7 +99,7 @@ Filesystem локально не копируется в staging.
 3. Создать `/etc/the-hub-backup/sqlite.conf`.
 4. Выполнить `DRY_RUN=1`.
 5. Выполнить один ручной PostgreSQL backup для `Finpipe` и `Yo Registry`.
-6. Выполнить один ручной SQLite backup для `Uptime Kuma` и `Grafana`.
+6. Выполнить один ручной SQLite backup для `Traect`, `Echo`, `Uptime Kuma` и `Grafana`.
 7. Проверить PostgreSQL dump через `pg_restore --list`.
 8. Проверить SQLite dump через `sqlite3 backup.db 'PRAGMA integrity_check;'`.
 9. Установить systemd units.
@@ -129,6 +127,9 @@ POSTGRES_BACKUP_CONFIG=/etc/the-hub-backup/postgres.conf \
 `/home/katrin/backups/registry_backup.sh`, но такого файла нет.
 Фактический скрипт находится по пути `/opt/backups/registry_backup.sh`.
 Это уже существующий broken scheduler и требует отдельного ручного исправления.
+
+Для `Echo` и `Traect` существующие application backup scripts и cron jobs пока не удаляются.
+Отключать их можно только после проверки unified SQLite backup на production VPS.
 
 ## Migration Checklist For PostgreSQL
 
