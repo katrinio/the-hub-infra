@@ -10,6 +10,7 @@ Dashboard configuration в Grafana не должен быть единствен
 
 - `monitoring/compose.yaml` поднимает `Grafana`, `Prometheus`, `Loki`, `Alloy`, `node-exporter`, `cadvisor`.
 - `monitoring/config/prometheus/prometheus.yml` scrape'ит `prometheus`, `node-exporter`, `cadvisor`.
+- `monitoring/config/loki/local-config.yaml` задаёт Loki single-node filesystem storage и explicit retention.
 - `monitoring/config/alloy/config.alloy` читает Docker container logs через Docker socket и отправляет их в `Loki`.
 - `docker/monitoring.compose.yml`, `docker/prometheus.yml` и `docker/alloy-config.alloy` являются похожей monitoring-конфигурацией старого layout. В ней нет `cadvisor` и нет явных networks.
 - Grafana dashboards созданы и работают в самой Grafana (folder `The Hub`, Grafana 13.1.0 OSS), но provisioning/JSON files в репозитории пока не сохранены. Актуальное состояние см. в разделе "Current Grafana Implementation".
@@ -63,6 +64,28 @@ Alloy сейчас пишет Docker-логи в Loki одним stream'ом `se
 Loki self-audit noise: контейнеры `grafana` и `loki` шлют свой stdout в Loki, поэтому error-панели исключают строки собственных запросов Loki фильтром `!= "query_hash="`.
 
 Log format: у сервиса `grafana` в `monitoring/compose.yaml` выставлен `GF_LOG_CONSOLE_FORMAT=json` (вместо logfmt по умолчанию) — логи Grafana пишутся в JSON, чище парсятся в Loki по полям (`level`, `msg`, ...). Level оставлен `info`. Цветовая маркировка уровня и `detected_level` работают на обоих форматах. Каждый другой контейнер логирует в своём формате — эта настройка влияет только на Grafana.
+
+## Retention Policy
+
+Loki работает как single-node filesystem-backed service:
+
+- image: `grafana/loki:3.7.0`
+- config: `monitoring/config/loki/local-config.yaml`
+- storage: Docker volume `monitoring_loki-data`, mounted as `/loki`
+- schema: TSDB `v13`
+- object storage: filesystem
+- replication factor: `1`
+- Loki retention: `720h` (`30 days`)
+
+| Data | Owner | Storage | Retention / rotation |
+|---|---|---|---|
+| Loki logs | Loki | `monitoring_loki-data` | Current policy: `30 days` via `limits_config.retention_period: 720h` and Loki compactor retention |
+| systemd journal | journald | host | Current policy: OS defaults. TODO: define explicit journald size/time limits |
+| Docker json-file logs | Docker | host | Current policy: no explicit rotation in repository. TODO: configure Docker log rotation separately |
+| Prometheus metrics | Prometheus | `monitoring_prometheus-data` | Current policy: Prometheus image/default retention because no `--storage.tsdb.retention.*` flag is configured. TODO: define explicit metrics retention |
+| Grafana DB | Grafana | `monitoring_grafana-data` | Persistent. Protected by unified SQLite backup through `docker_cp:grafana:/var/lib/grafana/grafana.db` |
+
+This task only makes Loki retention explicit. journald retention, Docker log rotation and Prometheus retention remain follow-up work.
 
 ## Architecture Diagram
 
@@ -535,6 +558,7 @@ Available heartbeat now:
 - `monitoring/compose.yaml` includes `cadvisor`, while `docker/monitoring.compose.yml` does not.
 - `monitoring/compose.yaml` uses explicit `monitoring` and `finpipe-shared` networks; `docker/monitoring.compose.yml` does not.
 - `monitoring/config/prometheus/prometheus.yml` scrape'ит `cadvisor`; `docker/prometheus.yml` does not.
+- `monitoring/compose.yaml` mounts repository-owned Loki config with 30-day retention; `docker/monitoring.compose.yml` still uses the Loki image-bundled config and is treated as legacy.
 - Grafana dashboards созданы live в Grafana (folder `The Hub`), но provisioning files и dashboard JSON пока не сохранены в репозиторий.
 - Фактические Loki labels (`service_name="unknown_service"`) не совпадают с target-labels (`job` / `service` / `host`) из этого документа — Alloy pipeline не добавляет container/systemd labels.
 - Дашборд `Infra / VPS` удалён, его содержимое перенесено в `10 Infrastructure`.

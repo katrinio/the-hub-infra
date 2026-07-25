@@ -8,6 +8,7 @@ services:
     ports:
       - "127.0.0.1:3100:3100"
     volumes:
+      - ./config/loki/local-config.yaml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
     restart: unless-stopped
     networks:
