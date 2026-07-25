@@ -114,9 +114,11 @@ push_kuma_status() {
   fi
 
   curl --fail --silent --show-error \
+    --get \
     --max-time 10 \
+    --data-urlencode "status=${status}" \
     --data-urlencode "msg=${message}" \
-    "${url}?status=${status}" >/dev/null || {
+    "${url}" >/dev/null || {
     log_warn "failed to push backup status to Kuma"
     return 0
   }
