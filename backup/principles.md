@@ -11,9 +11,10 @@
 5. Filesystem резервируется только если он является источником истины.
 6. PostgreSQL всегда резервируется через `pg_dump`.
 7. PostgreSQL volume никогда не копируется как backup-источник.
-8. SQLite всегда резервируется через SQLite Backup API.
-9. `cp` живой SQLite database никогда не используется.
-10. Каждый backup должен быть пригоден для полного восстановления.
+8. Host-visible SQLite всегда резервируется через SQLite Backup API.
+9. Container-backed SQLite может резервироваться через `docker cp` во временный host file с обязательным `PRAGMA integrity_check;` до публикации final backup file.
+10. Прямой `cp` живой host-visible SQLite database никогда не используется.
+11. Каждый backup должен быть пригоден для полного восстановления.
 
 ## Restore Principles
 

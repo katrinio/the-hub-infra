@@ -24,12 +24,13 @@ SQLite backup схемы.
 
 - Plain `cp` небезопасен для live SQLite database.
 - Для SQLite в `wal` mode это особенно важно, потому что согласованное состояние зависит от основного файла и sidecar-файлов WAL/SHM.
-- `sqlite3 .backup` использует SQLite backup API и создаёт согласованный snapshot.
-- Все SQLite-системы резервируются через SQLite Backup API.
+- `sqlite3 .backup` использует SQLite backup API и создаёт согласованный snapshot для host-visible SQLite files.
+- Container-backed SQLite может резервироваться через `docker cp` во временный host file только если backup user не может безопасно читать volume path напрямую.
+- Каждый container-copied SQLite dump должен проходить `PRAGMA integrity_check;` до rename в final backup filename.
 - Для infrastructure-managed SQLite backup используются `Traect`, `Echo`, `Uptime Kuma` и `Grafana`.
 - `Postbox` остаётся application-managed до фактического deployment production DB.
 - `Uptime Kuma` использует `wal` mode и поэтому должен резервироваться только безопасным snapshot-методом.
-- `Grafana` находится внутри Docker volume и требует чтения с root-level доступом.
+- `Grafana` резервируется из контейнера `grafana` через `docker cp`, потому что host user не должен читать Docker volume path напрямую.
 - `Postbox` остаётся inactive до фактического deployment production DB.
 
 ## Filesystem Backup Policy

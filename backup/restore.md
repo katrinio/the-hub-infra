@@ -56,7 +56,7 @@
 ## Grafana
 
 1. Остановить `Grafana`.
-2. Восстановить `grafana.db` в Docker volume.
+2. Восстановить `grafana.db` в контейнерный path `/var/lib/grafana/grafana.db`.
 3. Вернуть ownership к `uid 472` и ожидаемые group/mode.
 4. Запустить `Grafana`.
 5. Проверить dashboards, users и alerting.
@@ -76,8 +76,8 @@ Filesystem и database должны восстанавливаться согл�
 
 ## Traect And Echo
 
-- `Traect` использует application-managed backup в `/home/katrin/projects/traect/backup.sh`.
-- `Echo` использует application-managed backup в `/home/katrin/scripts/echo/backup.sh`.
+- `Traect` и `Echo` переходят на unified infrastructure-managed SQLite backup.
+- Существующие application-managed backup scripts пока не удаляются до проверки новой схемы на production VPS.
 
 ## Postbox
 

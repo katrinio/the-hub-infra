@@ -77,7 +77,7 @@ check_sqlite_backup() {
 main() {
   local env_file="${BACKUP_ENV_FILE:-/etc/the-hub-backup/backup.env}"
   local sqlite_conf="${SQLITE_BACKUP_CONFIG:-/etc/the-hub-backup/sqlite.conf}"
-  local line system source_path output_name retention_days criticality extra
+  local line
   local failures=0 processed=0
 
   if [[ -f "${env_file}" ]]; then
@@ -94,11 +94,26 @@ main() {
   : "${SQLITE_MAX_BACKUP_AGE_HOURS:?SQLITE_MAX_BACKUP_AGE_HOURS is required}"
 
   while IFS= read -r line || [[ -n "${line}" ]]; do
+    local system source_kind source_ref output_name retention_days criticality extra
     [[ -z "${line}" ]] && continue
     [[ "${line}" =~ ^[[:space:]]*# ]] && continue
 
-    IFS='|' read -r system source_path output_name retention_days criticality extra <<< "${line}"
-    if [[ -n "${extra:-}" || -z "${system}" || -z "${source_path}" || -z "${output_name}" || -z "${retention_days}" || -z "${criticality}" ]]; then
+    IFS='|' read -r system source_kind source_ref output_name retention_days criticality extra <<< "${line}"
+    if [[ -n "${extra:-}" ]]; then
+      log_error "invalid config line: ${line}"
+      failures=$((failures + 1))
+      continue
+    fi
+
+    if [[ -z "${criticality:-}" ]]; then
+      criticality="${retention_days:-}"
+      retention_days="${output_name:-}"
+      output_name="${source_ref:-}"
+      source_ref="${source_kind:-}"
+      source_kind="host_path"
+    fi
+
+    if [[ -z "${system}" || -z "${source_kind}" || -z "${source_ref}" || -z "${output_name}" || -z "${retention_days}" || -z "${criticality}" ]]; then
       log_error "invalid config line: ${line}"
       failures=$((failures + 1))
       continue
