@@ -210,6 +210,7 @@ main() {
   require_file "${sqlite_conf}"
   : "${SQLITE_BACKUP_DIR:?SQLITE_BACKUP_DIR is required}"
   : "${SQLITE_BACKUP_LOCK_FILE:?SQLITE_BACKUP_LOCK_FILE is required}"
+  : "${SQLITE_KUMA_PUSH_URL_FILE:?SQLITE_KUMA_PUSH_URL_FILE is required}"
 
   ensure_directory "${SQLITE_BACKUP_DIR}"
   acquire_lock "${SQLITE_BACKUP_LOCK_FILE}"
@@ -254,18 +255,18 @@ main() {
 
   if (( processed == 0 )); then
     log_error "no SQLite backup entries found in ${sqlite_conf}"
-    push_kuma_status "down" "sqlite backup failed: no entries configured"
+    push_kuma_status "down" "sqlite backup failed: no entries configured" "${SQLITE_KUMA_PUSH_URL_FILE}"
     return 1
   fi
 
   if (( failures > 0 )); then
     log_error "sqlite backup finished with ${failures} failure(s)"
-    push_kuma_status "down" "sqlite backup finished with failures"
+    push_kuma_status "down" "sqlite backup finished with failures" "${SQLITE_KUMA_PUSH_URL_FILE}"
     return 1
   fi
 
   log_info "sqlite backup finished successfully"
-  push_kuma_status "up" "sqlite backup finished successfully"
+  push_kuma_status "up" "sqlite backup finished successfully" "${SQLITE_KUMA_PUSH_URL_FILE}"
 }
 
 main "$@"

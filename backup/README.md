@@ -6,6 +6,11 @@
 Реальные скрипты находятся в `backup/scripts/`.
 Реальные конфиги должны находиться в `/etc/the-hub-backup/`.
 
+`backup.env` должен задавать отдельные Uptime Kuma Push URL files для PostgreSQL и SQLite:
+
+- `KUMA_PUSH_URL_FILE=/etc/the-hub-backup/kuma-push-url`
+- `SQLITE_KUMA_PUSH_URL_FILE=/etc/the-hub-backup/kuma-sqlite-push-url`
+
 ## Архитектура
 
 Текущая схема:
