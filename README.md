@@ -33,7 +33,15 @@ docker/finpipe.compose.yml
 
 Compose:
 
+monitoring/compose.yaml
+
+Legacy compose:
+
 docker/monitoring.compose.yml
+
+Dashboard architecture and metric catalog:
+
+monitoring/README.md
 
 Состав:
 
