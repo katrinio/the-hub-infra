@@ -8,6 +8,7 @@ services:
     ports:
       - "127.0.0.1:3100:3100"
     volumes:
+      - ./config/loki/local-config.yaml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
     restart: unless-stopped
     networks:
@@ -16,6 +17,8 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
+    environment:
+      - GF_LOG_CONSOLE_FORMAT=json  # Логи Grafana в JSON: чище в Loki, парсятся по полям (level, msg, ...)
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
