@@ -74,11 +74,7 @@ Filesystem и database должны восстанавливаться согл�
 5. Проверить права.
 6. Запустить приложение.
 
-## Traect And Echo
+## Traect, Echo And Postbox
 
-- `Traect` и `Echo` переходят на unified infrastructure-managed SQLite backup.
+- `Traect`, `Echo` и `Postbox` используют unified infrastructure-managed SQLite backup.
 - Существующие application-managed backup scripts пока не удаляются до проверки новой схемы на production VPS.
-
-## Postbox
-
-- Restore для `Postbox` документируется только после фактического deployment production DB.

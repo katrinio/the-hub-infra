@@ -13,10 +13,8 @@
 # Legacy host-path lines without source_kind are still accepted:
 # system|source_path|output_name|retention_days|criticality
 #
-# Postbox is not yet deployed and must not be added to active infrastructure backup
-# until the production database exists.
-
 Traect|host_path|/home/katrin/projects/traect/data/traect.db|traect|30|important
 Echo|host_path|/home/katrin/data/echo/echo.db|echo|30|important
+Postbox|host_path|/home/katrin/projects/postbox/data/postbox.db|postbox|30|important
 Uptime Kuma|host_path|/home/katrin/projects/uptime-kuma/data/kuma.db|uptime-kuma|30|important
 Grafana|docker_cp|grafana:/var/lib/grafana/grafana.db|grafana|30|important

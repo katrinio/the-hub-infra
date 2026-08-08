@@ -15,7 +15,7 @@
 |---|---|---|---|---|---|---|---|
 | 🟡 | Traect | SQLite | `host_path:/home/katrin/projects/traect/data/traect.db` | SQLite Backup API | Planned unified backup | `30 days` | Infrastructure-managed target. Existing application backup and cron stay in place until unified backup is validated |
 | 🟡 | Echo | SQLite | `host_path:/home/katrin/data/echo/echo.db` | SQLite Backup API | Planned unified backup | `30 days` | Infrastructure-managed target. Existing application backup and cron stay in place until unified backup is validated |
-| 🟡 | Postbox | SQLite | `/home/katrin/projects/postbox/data/postbox.db` expected path | SQLite Backup API | No active schedule confirmed | TODO | Application-managed. Not yet deployed |
+| 🟡 | Postbox | SQLite | `host_path:/home/katrin/projects/postbox/data/postbox.db` | SQLite Backup API | Planned unified backup | `30 days` | Infrastructure-managed |
 | 🟡 | Uptime Kuma | SQLite | `host_path:/home/katrin/projects/uptime-kuma/data/kuma.db` | SQLite Backup API | Planned | `30 days` | Infrastructure-managed. `Journal mode: wal`. Live database is never copied with `cp` |
 | 🟡 | Grafana | SQLite | `docker_cp:grafana:/var/lib/grafana/grafana.db` | Container file copy + integrity check | Planned | `30 days` | Infrastructure-managed. Backup user reads the DB through `docker cp` because direct volume access is not safe for the host user |
 

@@ -32,11 +32,7 @@ Supported SQLite source kinds:
 Инфраструктурные скрипты управляют только:
 
 - PostgreSQL: `Finpipe`, `Yo Registry`
-- SQLite: `Traect`, `Echo`, `Uptime Kuma`, `Grafana`
-
-Существующие application-managed backup-скрипты остаются на месте и не заменяются:
-
-- `Postbox`
+- SQLite: `Traect`, `Echo`, `Postbox`, `Uptime Kuma`, `Grafana`
 
 Старый `/opt/backups/registry_backup.sh` пока не удалять. Отключать старый Registry backup можно
 только после проверки новой схемы.
@@ -115,7 +111,7 @@ Filesystem локально не копируется в staging.
 3. Создать `/etc/the-hub-backup/sqlite.conf`.
 4. Выполнить `DRY_RUN=1`.
 5. Выполнить один ручной PostgreSQL backup для `Finpipe` и `Yo Registry`.
-6. Выполнить один ручной SQLite backup для `Traect`, `Echo`, `Uptime Kuma` и `Grafana`.
+6. Выполнить один ручной SQLite backup для `Traect`, `Echo`, `Postbox`, `Uptime Kuma` и `Grafana`.
 7. Проверить PostgreSQL dump через `pg_restore --list`.
 8. Проверить SQLite dump через `sqlite3 backup.db 'PRAGMA integrity_check;'`.
 9. Установить systemd units.
@@ -146,6 +142,9 @@ POSTGRES_BACKUP_CONFIG=/etc/the-hub-backup/postgres.conf \
 
 Для `Echo` и `Traect` существующие application backup scripts и cron jobs пока не удаляются.
 Отключать их можно только после проверки unified SQLite backup на production VPS.
+
+Для `Postbox` SQLite backup включён в unified infrastructure-managed схему через host-visible DB
+`/home/katrin/projects/postbox/data/postbox.db`.
 
 Для `Grafana` unified SQLite backup должен использовать container source
 `grafana:/var/lib/grafana/grafana.db`, а не прямой доступ к Docker volume path на host.

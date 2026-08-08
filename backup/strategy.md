@@ -4,8 +4,8 @@
 
 ## Responsibilities
 
-- Application-managed: `Postbox`
-- Infrastructure-managed: `Finpipe`, `Yo Registry`, `Traect`, `Echo`, `Uptime Kuma`, `Grafana`
+- Application-managed: none
+- Infrastructure-managed: `Finpipe`, `Yo Registry`, `Traect`, `Echo`, `Postbox`, `Uptime Kuma`, `Grafana`
 
 Application-owned рабочие скрипты не заменяются, если они уже существуют и подтверждены в эксплуатации.
 Существующий Finpipe backup-механизм пока не удаляется до проверки новой unified PostgreSQL схемы.
@@ -27,11 +27,10 @@ SQLite backup схемы.
 - `sqlite3 .backup` использует SQLite backup API и создаёт согласованный snapshot для host-visible SQLite files.
 - Container-backed SQLite может резервироваться через `docker cp` во временный host file только если backup user не может безопасно читать volume path напрямую.
 - Каждый container-copied SQLite dump должен проходить `PRAGMA integrity_check;` до rename в final backup filename.
-- Для infrastructure-managed SQLite backup используются `Traect`, `Echo`, `Uptime Kuma` и `Grafana`.
-- `Postbox` остаётся application-managed до фактического deployment production DB.
+- Для infrastructure-managed SQLite backup используются `Traect`, `Echo`, `Postbox`, `Uptime Kuma` и `Grafana`.
+- `Postbox` резервируется через SQLite Backup API из host-visible DB path.
 - `Uptime Kuma` использует `wal` mode и поэтому должен резервироваться только безопасным snapshot-методом.
 - `Grafana` резервируется из контейнера `grafana` через `docker cp`, потому что host user не должен читать Docker volume path напрямую.
-- `Postbox` остаётся inactive до фактического deployment production DB.
 
 ## Filesystem Backup Policy
 
